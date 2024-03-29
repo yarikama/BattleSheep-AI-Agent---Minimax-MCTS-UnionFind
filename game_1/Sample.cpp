@@ -15,7 +15,7 @@ struct Move{
 	int8_t direction;
 };
 
-// 版面資訊：棋盤狀態、羊群分布狀態
+// 版面資訊：棋盤狀態、羊群分布狀態 - 看看後面要不要用稀疏矩陣
 class GameState{
 	private:
 		int8_t playerID;
@@ -28,17 +28,16 @@ class GameState{
 			memcpy(this->sheepState, sheepState, sizeof(sheepState));
 		}
 		int8_t getPlayerID() return this->playerID;
-		int8_t getMapState() return this->mapState;
-		int8_t getSheepState() return this->sheepState;
+		int8_t (*getMapState())[MAXGRID] return this->mapState;
+		int8_t (*getSheepState())[MAXGRID] return this->sheepState;
 		std::vector<Move> getMoves();
 }
 
-GameState::std::vector<Move> getMoves(){
+std::vector<Move> GameState::getMoves(){
 	std::vector<Move> moves;
-	// 這裡要寫出所有可能的移動方式
+
 	return moves;
 }
-
 
 /*
     選擇起始位置
