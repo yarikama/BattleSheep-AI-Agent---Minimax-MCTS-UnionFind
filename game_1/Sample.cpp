@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <utility>
 #include <math.h>
+#include <algorithm>
 
 #define MAXGRID 12
 
@@ -17,8 +18,7 @@ int8_t dy[] = {0, 1, 1, 1, 0, 0, 0, -1, -1, -1};
 int8_t dxx[] = {-1, 0, 1, 0};
 int8_t dyy[] = {0, 1, 0, -1};
 
-inline bool isPositionValid(int8_t x, int8_t y) return x >= 0 && x < MAXGRID && y >= 0 && y < MAXGRID;
-
+inline bool isPositionValid(int8_t x, int8_t y) { return x >= 0 && x < MAXGRID && y >= 0 && y < MAXGRID; }
 // 移動方式
 struct Move{
 	int8_t x;
@@ -46,9 +46,9 @@ class GameState{
 			mapState[initSheepBlock.first][initSheepBlock.second] = playerID;
 			sheepState[initSheepBlock.first][initSheepBlock.second] = 16;
 		}
-		inline int8_t getPlayerID() return this->playerID;
-		inline int8_t (*getMapState())[MAXGRID] return this->mapState;
-		inline int8_t (*getSheepState())[MAXGRID] return this->sheepState;
+		inline int8_t getPlayerID() { return this->playerID; }
+		inline int8_t (*getMapState())[MAXGRID] { return this->mapState; }
+		inline int8_t (*getSheepState())[MAXGRID] { return this->sheepState; }
 		std::vector<Move> getWhereToMoves();
 		int8_t getSheepNumberToDivide(int8_t x, int8_t y);
 }
@@ -67,7 +67,7 @@ std::vector<Move> GameState::getWhereToMoves(){
 		// 找出我有羊群的位置
 		int8_t x = sheepBlock.first, y = sheepBlock.second;
 		int8_t sheepNumber = this->sheepState[x][y];
-		if(sheepBlock <= 1) continue;
+		if(sheepNumber <= 1) continue;
 
 		// 找出所有羊群各自可以走到底的地方（不能是自己）
 		for(int8_t direction = 1; direction <= 9; ++direction){
@@ -103,20 +103,20 @@ float GameState::calculateArea(int8_t x, int8_t y){
 		float area = 0;
 		int8_t xMove = x + dx[i];
 		int8_t yMove = y + dy[i];
-		if(isPositionValid(xMove, yMove) && this->mapState[xMove][yMove] == 0) area = pow(dfs(xMove, yMove, visited), exponentDFSArea);
+		if(isPositionValid(xMove, yMove) && this->mapState[xMove][yMove] == 0) area = pow(this->dfs(xMove, yMove, visited), exponentDFSArea);
 		totalArea += area;
 	}
 	return totalArea;
 }
 
-int dfs(int8_t x, int8_t y, vector<vector<bool>>& visited){
+int GameState::dfs(int8_t x, int8_t y, vector<vector<bool>>& visited){
 	if(visited[x][y]) return 0;
 	visited[x][y] = true;
 	int area = 1;
 	for(int i = 1 ; i <= 4 ; ++i){
 		int8_t xMove = x + dxx[i];
 		int8_t yMove = y + dyy[i];
-		if(isPositionValid(xMove, yMove) && this->mapState[xMove][yMove] == 0) area += dfs(xMove, yMove, visited);
+		if(isPositionValid(xMove, yMove) && this->mapState[xMove][yMove] == 0) area += this->dfs(xMove, yMove, visited);
 	}
 	return area;
 }
