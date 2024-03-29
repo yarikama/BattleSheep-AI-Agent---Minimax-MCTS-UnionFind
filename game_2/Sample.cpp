@@ -4,6 +4,62 @@
 #include <iostream>
 #include <vector>
 
+#define MAXGRID 15
+#define powSurroundLen 1.5
+#define weightSurroundLen1.5
+#define weightEmpty 2
+
+class GameInit{
+	private:
+		int8_t mapState[MAXGRID][MAXGRID];
+	public:
+		GameInit(int8_t mapState[MAXGRID][MAXGRID]){
+			memcpy(this->mapState, mapState, sizeof(mapState));
+		}
+		std::vector<int> getPosition();
+}
+
+std::vector<int> GameInit::getPosition(){
+	std::vector<int> position;
+	int maxScore = 0;
+	for(int y = 0; y < MAXGRID; y++){
+		for(int x = 0; x < MAXGRID; x++){
+			if(this->mapState[y][x] != 0) continue;
+			int numEmpty = 0, numSurround = 0;
+			for(int sy = -1 ; sy <= 1 ; sy++){
+				for(int sx = -1 ; sx <= 1 ; sx++){
+					if(sx == 0 && sy == 0) continue;
+					if(y + sy < 0 || y + sy >= MAXGRID || x + sx < 0 || x + sx >= MAXGRID) continue;
+					//周圍是否有空格
+					if(this->mapState[y + sy][x + sx] != 0) continue;
+					numEmpty++;
+					//周圍延伸距離
+					int newY = y + sy, newX = x + sx;
+					int lenSurround = 0;
+					while(newY >= 0 && newY < MAXGRID && newX >= 0 && newX < MAXGRID){
+						if(this->mapState[newY][newX] != 0) break;
+						lenSurround++;
+						newY += sy;
+						newX += sx;
+					}
+					numSurround = numSurround + pow(lenSurround, powSurroundLen);
+				}
+			}
+			//目標周圍空格多、周圍延伸距離短
+			int score = weightEmpty * numEmpty - weightSurroundLen * numSurround / 8;
+			if(score > maxScore){
+				maxScore = score;
+				position.clear();
+				position.push_back(x);
+				position.push_back(y);
+			}
+		}
+	}
+	printf("position: %d %d\n", position[0], position[1]);
+
+	return position;
+}
+
 /*
     選擇起始位置
     選擇範圍僅限場地邊緣(至少一個方向為牆)
@@ -12,15 +68,13 @@
     init_pos=<x,y>,代表你要選擇的起始位置
     
 */
-std::vector<int> InitPos(int mapStat[15][15])
+std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
 {
 	std::vector<int> init_pos;
 	init_pos.resize(2);
 
-	/*
-		Write your code here
-	*/
-    
+	GameInit gameInit(mapStat);
+    init_pos = gameInit.getPosition();
     
     return init_pos;
 }
@@ -43,7 +97,7 @@ std::vector<int> InitPos(int mapStat[15][15])
 			4 X 6
 			7 8 9
 */
-std::vector<int> GetStep(int playerID,int mapStat[15][15], int sheepStat[15][15])
+std::vector<int> GetStep(int playerID,int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID])
 {
 
 	std::vector<int> step;
