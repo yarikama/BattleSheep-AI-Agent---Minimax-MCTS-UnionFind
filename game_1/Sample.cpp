@@ -24,6 +24,8 @@ int dy[] = {0, 1, 1, 1, 0, 0, 0, -1, -1, -1};
 int dxx[] = {-1, 0, 1, 0};
 int dyy[] = {0, 1, 0, -1};
 
+FILE* outfile;
+
 inline bool isPositionValid(int x, int y) { return x >= 0 && x < MAXGRID && y >= 0 && y < MAXGRID; }
 template<typename T>
 inline bool isPositionValidForOccupying(int x, int y, T mapState[MAXGRID][MAXGRID]) {return isPositionValid(x, y) && mapState[x][y] == 0; }
@@ -44,8 +46,10 @@ void printMap(int mapStat[MAXGRID][MAXGRID]){
 	for(int y = 0; y < MAXGRID; y++){
 		for(int x = 0; x < MAXGRID; x++){
 			printf("%d\t", mapStat[x][y]);
+			fprintf(outfile, "%d\t", mapStat[x][y]);
 		}
 		printf("\n\n");
+		fprintf(outfile, "\n\n");
 	}
 }
 
@@ -313,11 +317,15 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
     step[3] = bestMove.direction;
 	printMap(mapStat);
 	std::cout << "Step: " << step[0] << " " << step[1] << " " << step[2] << " " << step[3] << std::endl;
+	fprintf(outfile, "Step: %d %d %d %d\n", step[0], step[1], step[2], step[3]);
     return step;    
 }
 
 int main()
 {
+	std::string filename = "output.txt";
+    outfile = fopen(filename.c_str(), "a");
+
 	int id_package;
 	int playerID;
     int mapStat[12][12];
@@ -335,4 +343,5 @@ int main()
 		std::vector<int> step = GetStep(playerID, mapStat, sheepStat, std::make_pair(init_pos[0], init_pos[1]));
 		SendStep(id_package, step);
 	}
+	fclose(outfile);
 }
