@@ -116,12 +116,11 @@ class GameState{
 		int sheepState[MAXGRID][MAXGRID];
 		std::vector<sheepBlock> mySheepBlocks;
 	public:
-		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], sheepBlock& initSheepBlock){
+		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], std::vector<sheepBlock> sheepBlocks){
 			this->playerID = playerID;
 			std::copy(&mapState[0][0], &mapState[0][0] + MAXGRID * MAXGRID, &this->mapState[0][0]);
 			std::copy(&sheepState[0][0], &sheepState[0][0] + MAXGRID * MAXGRID, &this->sheepState[0][0]);
-			// printMap(this->mapState);
-			this->mySheepBlocks.emplace_back(initSheepBlock);
+			this->mySheepBlocks = sheepBlocks;			
 		}
 		inline int getPlayerID() { return this->playerID; }
 		inline int (*getMapState())[MAXGRID] { return this->mapState; }
@@ -291,7 +290,7 @@ int GameState::evaluate(){
 			4 X 6
 			7 8 9
 */
-std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], sheepBlock sb)
+std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], std::vector<sheepBlock> sb)
 {
 	std::vector<int> step;
 	step.resize(4);
@@ -321,27 +320,29 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
     return step;    
 }
 
-int main()
-{
-	std::string filename = "output.txt";
-    outfile = fopen(filename.c_str(), "w");
-
-	int id_package;
-	int playerID;
-    int mapStat[12][12];
-    int sheepStat[12][12];
-
-	// player initial
-	GetMap(id_package, playerID, mapStat);
-	std::vector<int> init_pos = InitPos(mapStat);
-	SendInitPos(id_package,init_pos);
-
-	while (true)
+	int main()
 	{
-		if (GetBoard(id_package, mapStat, sheepStat))
-			break;
-		std::vector<int> step = GetStep(playerID, mapStat, sheepStat, std::make_pair(init_pos[0], init_pos[1]));
-		SendStep(id_package, step);
+		std::string filename = "output.txt";
+		outfile = fopen(filename.c_str(), "w");
+
+		int id_package;
+		int playerID;
+		int mapStat[12][12];
+		int sheepStat[12][12];
+		std::vector<sheepBlock> sheepBlocks;
+
+		// player initial
+		GetMap(id_package, playerID, mapStat);
+		std::vector<int> init_pos = InitPos(mapStat);
+		SendInitPos(id_package,init_pos);
+		sheepBlocks.emplace_back(std::make_pair(init_pos[0], init_pos[1]));
+
+		while (true)
+		{
+			if (GetBoard(id_package, mapStat, sheepStat))
+				break;
+			std::vector<int> step = GetStep(playerID, mapStat, sheepStat, sheepBlocks);
+			SendStep(id_package, step);
+		}
+		fclose(outfile);
 	}
-	fclose(outfile);
-}
