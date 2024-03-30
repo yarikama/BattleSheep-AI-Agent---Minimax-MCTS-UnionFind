@@ -122,8 +122,6 @@ class GameState{
 			std::copy(&sheepState[0][0], &sheepState[0][0] + MAXGRID * MAXGRID, &this->sheepState[0][0]);
 			// printMap(this->mapState);
 			this->mySheepBlocks.emplace_back(initSheepBlock);
-			mapState[initSheepBlock.first][initSheepBlock.second] = playerID;
-			sheepState[initSheepBlock.first][initSheepBlock.second] = 16;
 		}
 		inline int getPlayerID() { return this->playerID; }
 		inline int (*getMapState())[MAXGRID] { return this->mapState; }
