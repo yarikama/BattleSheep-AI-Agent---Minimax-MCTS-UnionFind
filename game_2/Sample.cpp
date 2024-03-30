@@ -3,48 +3,70 @@
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
+#include <math.h>
+#include <cstdint>
 
 #define MAXGRID 15
 #define powSurroundLen 1.5
-#define weightSurroundLen1.5
+#define weightSurroundLen 1.5
 #define weightEmpty 2
+
+// 8個方向 or 4個方向
+int8_t dx[] = {0, -1, 0, 1, -1, 0, 1, -1, 0, 1};
+int8_t dy[] = {0, 1, 1, 1, 0, 0, 0, -1, -1, -1};
+int8_t dxx[] = {-1, 0, 1, 0};
+int8_t dyy[] = {0, 1, 0, -1};
 
 class GameInit{
 	private:
-		int8_t mapState[MAXGRID][MAXGRID];
+		int mapState[MAXGRID][MAXGRID];
 	public:
-		GameInit(int8_t mapState[MAXGRID][MAXGRID]){
-			memcpy(this->mapState, mapState, sizeof(mapState));
+		GameInit(int mapStat[MAXGRID][MAXGRID]){
+			memcpy(this->mapState, mapStat, sizeof(int) * MAXGRID * MAXGRID);
 		}
 		std::vector<int> getPosition();
-}
+};
 
 std::vector<int> GameInit::getPosition(){
+	printf("my gamestate\n");
+	for(int y = 0; y < MAXGRID; y++){
+		for(int x = 0; x < MAXGRID; x++){
+			printf("%d ", this->mapState[x][y]);
+		}
+		printf("\n\n");
+	}
 	std::vector<int> position;
 	int maxScore = 0;
 	for(int y = 0; y < MAXGRID; y++){
 		for(int x = 0; x < MAXGRID; x++){
-			if(this->mapState[y][x] != 0) continue;
-			int numEmpty = 0, numSurround = 0;
-			for(int sy = -1 ; sy <= 1 ; sy++){
-				for(int sx = -1 ; sx <= 1 ; sx++){
-					if(sx == 0 && sy == 0) continue;
-					if(y + sy < 0 || y + sy >= MAXGRID || x + sx < 0 || x + sx >= MAXGRID) continue;
-					//周圍是否有空格
-					if(this->mapState[y + sy][x + sx] != 0) continue;
-					numEmpty++;
-					//周圍延伸距離
-					int newY = y + sy, newX = x + sx;
-					int lenSurround = 0;
-					while(newY >= 0 && newY < MAXGRID && newX >= 0 && newX < MAXGRID){
-						if(this->mapState[newY][newX] != 0) break;
-						lenSurround++;
-						newY += sy;
-						newX += sx;
-					}
-					numSurround = numSurround + pow(lenSurround, powSurroundLen);
-				}
+			//檢查是否為障礙或其他player
+			if(this->mapState[x][y] != 0) continue;
+			//檢查是否為場地邊緣
+			bool isEdge = false;
+			for(int i = 0 ; i < 4 ; i++){
+				int8_t newX = x + dxx[i], newY = y + dyy[i];
+				if(newX < 0 || newX >= MAXGRID || newY < 0 || newY >= MAXGRID) continue;
+				if(this->mapState[newX][newY] == -1) isEdge = true;
 			}
+			//周圍空格數、周圍延伸距離
+			int numEmpty = 0;
+			double numSurround = 0;
+			for(int i = 1 ; i <= 9 && i != 5 ; i++){
+				int newX = x + dx[i], newY = y + dy[i];
+				if(newX < 0 || newX >= MAXGRID || newY < 0 || newY >= MAXGRID) continue;
+				if(this->mapState[newX][newY] == 0) numEmpty++;
+				//周圍延伸距離
+				int lenSurround = 0;
+				while(newY >= 0 && newY < MAXGRID && newX >= 0 && newX < MAXGRID){
+					if(this->mapState[newX][newY] != 0) break;
+					lenSurround++;
+					newX += dx[i];
+					newY += dy[i];
+				}
+				numSurround = numSurround + pow(lenSurround, powSurroundLen);
+			}
+			//限定場地邊緣
+			if(isEdge == false) continue;
 			//目標周圍空格多、周圍延伸距離短
 			int score = weightEmpty * numEmpty - weightSurroundLen * numSurround / 8;
 			if(score > maxScore){
@@ -55,7 +77,6 @@ std::vector<int> GameInit::getPosition(){
 			}
 		}
 	}
-	printf("position: %d %d\n", position[0], position[1]);
 
 	return position;
 }
