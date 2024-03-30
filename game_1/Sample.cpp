@@ -337,10 +337,8 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 		SendInitPos(id_package,init_pos);
 		sheepBlocks.emplace_back(std::make_pair(init_pos[0], init_pos[1]));
 
-		while (true)
-		{
-			if (GetBoard(id_package, mapStat, sheepStat))
-				break;
+		while (true){
+			if(GetBoard(id_package, mapStat, sheepStat)) break;
 			std::vector<int> step = GetStep(playerID, mapStat, sheepStat, sheepBlocks);
 			SendStep(id_package, step);
 		}
