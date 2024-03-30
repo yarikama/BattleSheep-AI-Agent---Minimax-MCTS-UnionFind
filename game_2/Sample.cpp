@@ -90,7 +90,7 @@ std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
 	std::vector<int> init_pos;
 	init_pos.resize(2);
 
-	GameInit gameInit();
+	GameInit gameInit;
     init_pos = gameInit.getPosition(mapStat);
     
     return init_pos;
