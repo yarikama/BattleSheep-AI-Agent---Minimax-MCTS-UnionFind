@@ -53,6 +53,12 @@ void printMap(int mapStat[MAXGRID][MAXGRID]){
 	}
 }
 
+void printsb(std::vector<sheepBlock> sb){
+	for(auto& block : sb){
+		fprintf(outfile, "(%d %d), ", block.first, block.second);
+	}
+}
+
 std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
 {
 	// printMap(mapStat);
@@ -312,11 +318,13 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
     step[1] = bestMove.y;
     step[2] = bestMove.subSheepNumber;
     step[3] = bestMove.direction;
+	fprintf(outfile, "\nStep: %d %d %d %d\n", step[0], step[1], step[2], step[3]);
 	printMap(mapStat);
 	fprintf(outfile, "============\n");
 	printMap(sheepStat);
-	std::cout << "Step: " << step[0] << " " << step[1] << " " << step[2] << " " << step[3] << std::endl;
-	fprintf(outfile, "Step: %d %d %d %d\n", step[0], step[1], step[2], step[3]);
+	fprintf(outfile, "============\n");
+	printsb(sb);
+	// std::cout << "Step: " << step[0] << " " << step[1] << " " << step[2] << " " << step[3] << std::endl;
     return step;    
 }
 
