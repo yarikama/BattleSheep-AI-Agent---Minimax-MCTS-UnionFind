@@ -12,7 +12,7 @@
 #define MAXGRID 12
 #define powSurroundLen 1.5
 #define weightSurroundLen 1
-#define weightEmpty 2.5
+#define weightEmpty 3
 #define exponentDFSArea 1.15
 #define exponentEvaluate 1.25
 
@@ -45,10 +45,10 @@ void printMap(int mapStat[MAXGRID][MAXGRID]){
 	printf("my gamestate\n");
 	for(int y = 0; y < MAXGRID; y++){
 		for(int x = 0; x < MAXGRID; x++){
-			printf("%d\t", mapStat[x][y]);
-			fprintf(outfile, "%d\t", mapStat[x][y]);
+			// printf("%d\t", mapStat[x][y]);
+			fprintf(outfile, "%d\t", mapStat[y][x]);
 		}
-		printf("\n\n");
+		// printf("\n\n");
 		fprintf(outfile, "\n\n");
 	}
 }
