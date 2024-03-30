@@ -2,7 +2,7 @@
 #include "STcpClient.h"
 #include <stdlib.h>
 #include <iostream>
-#include <vector>
+#include <std::vector>
 #include <cstdint>
 #include <utility>
 #include <math.h>
@@ -47,7 +47,7 @@ class GameState{
 		int8_t playerID;
 		int8_t mapState[MAXGRID][MAXGRID];
 		int8_t sheepState[MAXGRID][MAXGRID];
-		vector<int8_t> mySheepBlocks;
+		std::vector<int8_t> mySheepBlocks;
 	public:
 		GameState(int8_t playerID, int8_t mapState[MAXGRID][MAXGRID], int8_t sheepState[MAXGRID][MAXGRID], sheepBlock& initSheepBlock){
 			this->playerID = playerID;
@@ -63,7 +63,7 @@ class GameState{
 		std::vector<Move> getWhereToMoves();
 		int8_t getSheepNumberToDivide(int8_t x, int8_t y);
 		float calculateArea(int8_t x, int8_t y);
-		int dfs(int8_t x, int8_t y, vector<vector<bool>>& visited);
+		int dfs(int8_t x, int8_t y, std::vector<std::vector<bool>>& visited);
 		void applyMove(const Move& move, const GameState& state);
 }
 
@@ -107,13 +107,13 @@ int8_t GameState::getSheepNumberToDivide(int8_t xMove, int8_t yMove, int8_t x, i
 	int8_t sheepNumber = this->sheepState[x][y];
 	float areaMove = this->calculateArea(xMove, yMove);
 	float area = this->calculateArea(x, y);
-	int sheepNumberToDivide = max(int(sheepNumber * (areaMove / (areaMove + area))), 1);
+	int sheepNumberToDivide = std:max(int(sheepNumber * (areaMove / (areaMove + area))), 1);
 	return sheepNumberToDivide;			
 }
 
 // 加總連通面積1.25次方
 float GameState::calculateArea(int8_t x, int8_t y){
-	vector<vector<bool>> visited(3, vector<bool>(3, false));
+	std::vector<std::vector<bool>> visited(3, std::vector<bool>(3, false));
 	float totalArea = 0;
 	for(int i = 1 ; i <= 9 ; ++i){
 		float area = 0;
@@ -126,7 +126,7 @@ float GameState::calculateArea(int8_t x, int8_t y){
 }
 
 // DFS 算連通面積，不可以走過，並且要是自己地盤或是空地
-int GameState::dfs(int8_t x, int8_t y, vector<vector<bool>>& visited, int8_t anyPlayerID){
+int GameState::dfs(int8_t x, int8_t y, std::vector<std::vector<bool>>& visited, int8_t anyPlayerID){
 	if(visited[x][y] or !(mapState[x][y] == 0 or mapState[x][y] == anyPlayerID)) return 0;
 	visited[x][y] = true;
 	int area = 1;
@@ -157,8 +157,8 @@ int Minimax(int depth, int alpha, int beta, int playerID){
 		for(auto& move : this->getWhereToMoves()){
 			GameState newState = this->applyMove(move, *this);
 			int evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
-			maxEvaluation = max(maxEvaluation, evaluation);
-			alpha = max(alpha, evaluation);
+			maxEvaluation = std:max(maxEvaluation, evaluation);
+			alpha = std:max(alpha, evaluation);
 			if(beta <= alpha) break;
 		}
 		return maxEvaluation;
@@ -178,8 +178,8 @@ int Minimax(int depth, int alpha, int beta, int playerID){
 
 // 計算面積起始點要是某個玩家的地盤，並且沒有走過
 int evaluate(){
-	vector<vector<bool>> visited(MAXGRID, vector<bool>(MAXGRID, false));
-	vector<float> playerArea(5, 0);
+	std::vector<std::vector<bool>> visited(MAXGRID, std::vector<bool>(MAXGRID, false));
+	std::vector<float> playerArea(5, 0);
 	playerArea[0] = -1;
 	for(int i = 0 ; i < MAXGRID ; ++i){
 		for(int j = 0 ; j < MAXGRID ; ++j){
@@ -240,7 +240,7 @@ std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
 				if(i == 5) continue;
 				int newX = x + dx[i], newY = y + dy[i];
 				if(!isPositionValidForOccupying(newX, newY)) continue;
-				numEmpty++
+				numEmpty++;
 				//周圍延伸距離
 				int lenSurround = 0;
 				while(isPositionValidForOccupying(newX, newY)){
