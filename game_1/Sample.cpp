@@ -19,12 +19,14 @@ int8_t dxx[] = {-1, 0, 1, 0};
 int8_t dyy[] = {0, 1, 0, -1};
 
 inline bool isPositionValid(int8_t x, int8_t y) { return x >= 0 && x < MAXGRID && y >= 0 && y < MAXGRID; }
+inline bool isPositionValidForOccupying(int8_t x, int8_t y, int8_t playerID) { return isPositionValid(x, y) && mapState[x][y] == 0; }
 // 移動方式
 struct Move{
 	int8_t x;
 	int8_t y;
 	int8_t subSheepNumber;
 	int8_t direction;
+	int8_t displacement;
 };
 
 typedef struct Move Move;
@@ -51,6 +53,9 @@ class GameState{
 		inline int8_t (*getSheepState())[MAXGRID] { return this->sheepState; }
 		std::vector<Move> getWhereToMoves();
 		int8_t getSheepNumberToDivide(int8_t x, int8_t y);
+		float calculateArea(int8_t x, int8_t y);
+		int dfs(int8_t x, int8_t y, vector<vector<bool>>& visited);
+		void applyMove(const Move& move, const GameState& state);
 }
 
 /* 找可以走的地方 
@@ -74,12 +79,13 @@ std::vector<Move> GameState::getWhereToMoves(){
 			if(direction == 5) continue;
 			int8_t xMove = x
 			int8_t yMove = y;
-			while(isPositionValid(xMove, yMove) && this->mapState[xMove][yMove] == 0) {
+			while(isPositionValidForOccupying(xMove, yMove)) {
 				xMove += dx[direction]; 
 				yMove += dy[direction];
 			}
 			if(xMove == x && yMove == y) continue;
 			int8_t subSheepNumber = this->getSheepNumberToDivide(xMove, yMove, x, y);
+			moves.emplace_back(Move{x, y, subSheepNumber, direction, abs(xMove - x)});
 		}
 	}
 	return moves;
@@ -96,6 +102,7 @@ int8_t GameState::getSheepNumberToDivide(int8_t xMove, int8_t yMove, int8_t x, i
 	return sheepNumberToDivide;			
 }
 
+// 加總連通面積1.25次方
 float GameState::calculateArea(int8_t x, int8_t y){
 	vector<vector<bool>> visited(3, vector<bool>(3, false));
 	float totalArea = 0;
@@ -103,12 +110,13 @@ float GameState::calculateArea(int8_t x, int8_t y){
 		float area = 0;
 		int8_t xMove = x + dx[i];
 		int8_t yMove = y + dy[i];
-		if(isPositionValid(xMove, yMove) && this->mapState[xMove][yMove] == 0) area = pow(this->dfs(xMove, yMove, visited), exponentDFSArea);
+		if(isPositionValidForOccupying(xMove, yMove)) area = pow(this->dfs(xMove, yMove, visited), exponentDFSArea);
 		totalArea += area;
 	}
 	return totalArea;
 }
 
+// DFS 算連通面積
 int GameState::dfs(int8_t x, int8_t y, vector<vector<bool>>& visited){
 	if(visited[x][y]) return 0;
 	visited[x][y] = true;
@@ -116,10 +124,23 @@ int GameState::dfs(int8_t x, int8_t y, vector<vector<bool>>& visited){
 	for(int i = 1 ; i <= 4 ; ++i){
 		int8_t xMove = x + dxx[i];
 		int8_t yMove = y + dyy[i];
-		if(isPositionValid(xMove, yMove) && this->mapState[xMove][yMove] == 0) area += this->dfs(xMove, yMove, visited);
+		if(isPositionValidForOccupying(xMove, yMove)) area += this->dfs(xMove, yMove, visited);
 	}
 	return area;
 }
+
+GameState GameState::applyMove(const Move& move, const GameState& state){
+	GameState newState = state;
+	int8_t x = move.x, y = move.y;
+	int8_t xMove = x + dx[move.direction] * move.displacement;
+	int8_t yMove = y + dy[move.direction] * move.displacement;
+	newState.mapState[xMove][yMove] = this->playerID;
+	newState.sheepState[x][y] -= move.subSheepNumber;
+	newState.sheepState[xMove][yMove] = move.subSheepNumber;
+	newState.mySheepBlocks.emplace_back(xMove, yMove);
+	return newState;
+}
+
 
 /*
     選擇起始位置
