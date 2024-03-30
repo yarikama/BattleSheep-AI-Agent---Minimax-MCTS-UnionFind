@@ -122,11 +122,11 @@ class GameState{
 		int sheepState[MAXGRID][MAXGRID];
 		std::vector<sheepBlock> mySheepBlocks;
 	public:
-		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], std::vector<sheepBlock> sheepBlocks){
+		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], std::vector<sheepBlock>& sheepBlocks){
 			this->playerID = playerID;
 			std::copy(&mapState[0][0], &mapState[0][0] + MAXGRID * MAXGRID, &this->mapState[0][0]);
 			std::copy(&sheepState[0][0], &sheepState[0][0] + MAXGRID * MAXGRID, &this->sheepState[0][0]);
-			this->mySheepBlocks = sheepBlocks;			
+			this->mySheepBlocks = std::ref(sheepBlocks);			
 		}
 		inline int getPlayerID() { return this->playerID; }
 		inline int (*getMapState())[MAXGRID] { return this->mapState; }
@@ -221,7 +221,6 @@ GameState GameState::applyMove(const Move& move, const GameState& state){
 	newState.mapState[xMove][yMove] = this->playerID;
 	newState.sheepState[x][y] -= move.subSheepNumber;
 	newState.sheepState[xMove][yMove] = move.subSheepNumber;
-	newState.mySheepBlocks.emplace_back(xMove, yMove);
 	return newState;
 }
 
@@ -296,7 +295,7 @@ int GameState::evaluate(){
 			4 X 6
 			7 8 9
 */
-std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], std::vector<sheepBlock> sb)
+std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], std::vector<sheepBlock>& sb)
 {
 	std::vector<int> step;
 	step.resize(4);
@@ -318,13 +317,14 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
     step[1] = bestMove.y;
     step[2] = bestMove.subSheepNumber;
     step[3] = bestMove.direction;
-	fprintf(outfile, "\nStep: %d %d %d %d\n", step[0], step[1], step[2], step[3]);
+	step[4] = bestMove.displacement;
+	sb.push_back(std::make_pair(bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement));
+	fprintf(outfile, "\nStep: %d %d %d %d %d\n", step[0], step[1], step[2], step[3], step[4]);
 	printMap(mapStat);
 	fprintf(outfile, "============\n");
 	printMap(sheepStat);
 	fprintf(outfile, "============\n");
 	printsb(sb);
-	// std::cout << "Step: " << step[0] << " " << step[1] << " " << step[2] << " " << step[3] << std::endl;
     return step;    
 }
 
@@ -347,7 +347,8 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 
 		while (true){
 			if(GetBoard(id_package, mapStat, sheepStat)) break;
-			std::vector<int> step = GetStep(playerID, mapStat, sheepStat, sheepBlocks);
+			std::vector<int> bestMove = GetStep(playerID, mapStat, sheepStat, sheepBlocks);
+			std::vector<int> step = {bestMove[0], bestMove[1], bestMove[2], bestMove[3]};
 			SendStep(id_package, step);
 		}
 		fclose(outfile);
