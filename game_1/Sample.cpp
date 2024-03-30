@@ -7,19 +7,26 @@
 #include <utility>
 #include <math.h>
 #include <algorithm>
+#include <limits.h>
 
 #define MAXGRID 12
+#define powSurroundLen 1.5
+#define weightSurroundLen 1
+#define weightEmpty 2.5
+#define exponentDFSArea 1.15
+#define exponentEvaluate 1.25
 
-float exponentDFSArea = 1.15
-
-// 8個方向 or 4個方向
+// 8個方向 
 int8_t dx[] = {0, -1, 0, 1, -1, 0, 1, -1, 0, 1};
 int8_t dy[] = {0, 1, 1, 1, 0, 0, 0, -1, -1, -1};
+
+// 4個方向
 int8_t dxx[] = {-1, 0, 1, 0};
 int8_t dyy[] = {0, 1, 0, -1};
 
 inline bool isPositionValid(int8_t x, int8_t y) { return x >= 0 && x < MAXGRID && y >= 0 && y < MAXGRID; }
-inline bool isPositionValidForOccupying(int8_t x, int8_t y, int8_t playerID) { return isPositionValid(x, y) && mapState[x][y] == 0; }
+inline bool isPositionValidForOccupying(int8_t x, int8_t y) { return isPositionValid(x, y) && mapState[x][y] == 0; }
+
 // 移動方式
 struct Move{
 	int8_t x;
@@ -31,6 +38,8 @@ struct Move{
 
 typedef struct Move Move;
 typedef std::pair<int8_t, int8_t> sheepBlock; 
+
+
 
 // 版面資訊：棋盤狀態、羊群分布狀態、玩家ID、我的羊群位置（Stack）
 class GameState{
@@ -110,21 +119,21 @@ float GameState::calculateArea(int8_t x, int8_t y){
 		float area = 0;
 		int8_t xMove = x + dx[i];
 		int8_t yMove = y + dy[i];
-		if(isPositionValidForOccupying(xMove, yMove)) area = pow(this->dfs(xMove, yMove, visited), exponentDFSArea);
+		if(isPositionValidForOccupying(xMove, yMove)) area = pow(this->dfs(xMove, yMove, visited, this->playerID), exponentDFSArea);
 		totalArea += area;
 	}
 	return totalArea;
 }
 
-// DFS 算連通面積
-int GameState::dfs(int8_t x, int8_t y, vector<vector<bool>>& visited){
-	if(visited[x][y]) return 0;
+// DFS 算連通面積，不可以走過，並且要是自己地盤或是空地
+int GameState::dfs(int8_t x, int8_t y, vector<vector<bool>>& visited, int8_t anyPlayerID){
+	if(visited[x][y] or !(mapState[x][y] == 0 or mapState[x][y] == anyPlayerID)) return 0;
 	visited[x][y] = true;
 	int area = 1;
 	for(int i = 1 ; i <= 4 ; ++i){
 		int8_t xMove = x + dxx[i];
 		int8_t yMove = y + dyy[i];
-		if(isPositionValidForOccupying(xMove, yMove)) area += this->dfs(xMove, yMove, visited);
+		if(isPositionValidForOccupying(xMove, yMove)) area += this->dfs(xMove, yMove, visited, anyPlayerID);
 	}
 	return area;
 }
@@ -141,7 +150,49 @@ GameState GameState::applyMove(const Move& move, const GameState& state){
 	return newState;
 }
 
+int Minimax(int depth, int alpha, int beta, int playerID){
+	if(depth == 0) return this->evaluate();
+	if(playerID == this->playerID){
+		int maxEval = INT_MIN;
+		for(auto& move : this->getWhereToMoves()){
+			GameState newState = this->applyMove(move, *this);
+			int evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
+			maxEvaluation = max(maxEvaluation, evaluation);
+			alpha = max(alpha, evaluation);
+			if(beta <= alpha) break;
+		}
+		return maxEvaluation;
+	}
+	else{
+		int minEval = INT_MAX;
+		for(auto& move : this->getWhereToMoves()){
+			GameState newState = this->applyMove(move, *this);
+			int evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
+			minEvaluation = min(minEvaluation, evaluation);
+			beta = min(beta, evaluation);
+			if(beta <= alpha) break;
+		}
+		return minEvaluation;
+	}
+}
 
+// 計算面積起始點要是某個玩家的地盤，並且沒有走過
+int evaluate(){
+	vector<vector<bool>> visited(MAXGRID, vector<bool>(MAXGRID, false));
+	vector<float> playerArea(5, 0);
+	playerArea[0] = -1;
+	for(int i = 0 ; i < MAXGRID ; ++i){
+		for(int j = 0 ; j < MAXGRID ; ++j){
+			anyPlayerID = this->mapState[i][j];
+			if(visited[i][j] or anyPlayerID == 0 or anyPlayerID == -1) continue;
+			float area = pow(this->dfs(i, j, visited, anyPlayerID), exponentEvaluate);
+			playerArea[anyPlayerID] += area;
+		}
+	}
+	int rank = 4;
+	for(int i = 1 ; i <= 4 ; ++i) if(playerArea[i] < playerArea[this->playerID]) --rank;
+	return -1 * rank;
+}
 /*
     選擇起始位置
     選擇範圍僅限場地邊緣(至少一個方向為牆)
@@ -150,16 +201,68 @@ GameState GameState::applyMove(const Move& move, const GameState& state){
     init_pos=<x,y>,代表你要選擇的起始位置
     
 */
+
+void printMap(int mapStat[MAXGRID][MAXGRID]){
+	printf("my gamestate\n");
+	for(int y = 0; y < MAXGRID; y++){
+		for(int x = 0; x < MAXGRID; x++){
+			printf("%d ", mapStat[x][y]);
+		}
+		printf("\n\n");
+	}
+}
+
 std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
 {
+	printMap(mapStat);
+
 	std::vector<int> init_pos;
 	init_pos.resize(2);
+	int maxScore = 0;
+	for(int y = 0; y < MAXGRID; y++){
+		for(int x = 0; x < MAXGRID; x++){
 
-	/*
-		Write your code here
-	*/
-    
-    
+			//檢查是否為障礙或其他player
+			if(mapStat[x][y] != 0) continue;
+
+			//檢查是否為場地邊緣
+			bool isEdge = false;
+			for(int i = 0 ; i < 4 ; i++){
+				int8_t newX = x + dxx[i], newY = y + dyy[i];
+				if(!isPositionValid(newX, newY)) continue;
+				if(mapStat[newX][newY] == -1) isEdge = true;
+			}
+
+			//周圍空格數、周圍延伸距離
+			int numEmpty = 0;
+			double numSurround = 0;
+			for(int i = 1 ; i <= 9 ; i++){
+				if(i == 5) continue;
+				int newX = x + dx[i], newY = y + dy[i];
+				if(!isPositionValidForOccupying(newX, newY)) continue;
+				numEmpty++
+				//周圍延伸距離
+				int lenSurround = 0;
+				while(isPositionValidForOccupying(newX, newY)){
+					lenSurround++;
+					newX += dx[i];
+					newY += dy[i];
+				}
+				numSurround += pow(lenSurround, powSurroundLen);
+			}
+
+			//限定場地邊緣
+			if(isEdge == false) continue;
+
+			//目標周圍空格多、周圍延伸距離短
+			int score = weightEmpty * numEmpty - weightSurroundLen * numSurround / 8;
+			if(score > maxScore){
+				maxScore = score;
+				init_pos[0] = x;
+				init_pos[1] = y;
+			}
+		}
+	}    
     return init_pos;
 }
 
@@ -202,7 +305,7 @@ int main()
     int sheepStat[12][12];
 
 	// player initial
-	GetMap(id_package,playerID,mapStat);
+	GetMap(id_package, playerID, mapStat);
 	std::vector<int> init_pos = InitPos(mapStat);
 	SendInitPos(id_package,init_pos);
 
