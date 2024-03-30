@@ -316,6 +316,8 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
     step[2] = bestMove.subSheepNumber;
     step[3] = bestMove.direction;
 	printMap(mapStat);
+	fprintf(outfile, "============\n");
+	printMap(sheepStat);
 	std::cout << "Step: " << step[0] << " " << step[1] << " " << step[2] << " " << step[3] << std::endl;
 	fprintf(outfile, "Step: %d %d %d %d\n", step[0], step[1], step[2], step[3]);
     return step;    
@@ -324,7 +326,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 int main()
 {
 	std::string filename = "output.txt";
-    outfile = fopen(filename.c_str(), "a");
+    outfile = fopen(filename.c_str(), "w");
 
 	int id_package;
 	int playerID;
