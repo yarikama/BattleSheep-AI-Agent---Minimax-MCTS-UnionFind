@@ -25,8 +25,8 @@ int8_t dxx[] = {-1, 0, 1, 0};
 int8_t dyy[] = {0, 1, 0, -1};
 
 inline bool isPositionValid(int8_t x, int8_t y) { return x >= 0 && x < MAXGRID && y >= 0 && y < MAXGRID; }
-inline bool isPositionValidForOccupying(int8_t x, int8_t y) { return isPositionValid(x, y) && mapState[x][y] == 0; }
-
+template<typename T>
+inline bool isPositionValidForOccupying(int8_t x, int8_t y, T mapState[MAXGRID][MAXGRID]) {return isPositionValid(x, y) && mapState[x][y] == 0; }
 // 移動方式
 struct Move{
 	int8_t x;
@@ -47,12 +47,12 @@ class GameState{
 		int8_t playerID;
 		int8_t mapState[MAXGRID][MAXGRID];
 		int8_t sheepState[MAXGRID][MAXGRID];
-		std::vector<int8_t> mySheepBlocks;
+		std::vector<sheepBlock> mySheepBlocks;
 	public:
 		GameState(int8_t playerID, int8_t mapState[MAXGRID][MAXGRID], int8_t sheepState[MAXGRID][MAXGRID], sheepBlock& initSheepBlock){
 			this->playerID = playerID;
-			memcpy(this->mapState, mapState, sizeof(mapState));
-			memcpy(this->sheepState, sheepState, sizeof(sheepState));
+			std::copy(&mapState[0][0], &mapState[0][0] + MAXGRID * MAXGRID, &this->mapState[0][0]);
+			std::copy(&sheepState[0][0], &sheepState[0][0] + MAXGRID * MAXGRID, &this->sheepState[0][0]);
 			this->mySheepBlocks.emplace_back(initSheepBlock);
 			mapState[initSheepBlock.first][initSheepBlock.second] = playerID;
 			sheepState[initSheepBlock.first][initSheepBlock.second] = 16;
@@ -60,12 +60,15 @@ class GameState{
 		inline int8_t getPlayerID() { return this->playerID; }
 		inline int8_t (*getMapState())[MAXGRID] { return this->mapState; }
 		inline int8_t (*getSheepState())[MAXGRID] { return this->sheepState; }
+		inline std::vector<sheepBlock> getMySheepBlocks() { return this->mySheepBlocks; }
 		std::vector<Move> getWhereToMoves();
-		int8_t getSheepNumberToDivide(int8_t x, int8_t y);
+		int8_t getSheepNumberToDivide(int8_t xMove, int8_t yMove, int8_t x, int8_t y);
 		float calculateArea(int8_t x, int8_t y);
-		int dfs(int8_t x, int8_t y, std::vector<std::vector<bool>>& visited);
-		void applyMove(const Move& move, const GameState& state);
-}
+		int dfs(int8_t x, int8_t y, std::vector<std::vector<bool>>& visited, int8_t anyPlayerID);
+		GameState applyMove(const Move& move, const GameState& state);
+		int Minimax(int depth, int alpha, int beta, int playerID);
+		int evaluate();
+};
 
 /* 找可以走的地方 
 	1. 找出我有羊群的位置（>1）
@@ -86,9 +89,9 @@ std::vector<Move> GameState::getWhereToMoves(){
 		// 找出所有羊群各自可以走到底的地方（不能是自己）
 		for(int8_t direction = 1; direction <= 9; ++direction){
 			if(direction == 5) continue;
-			int8_t xMove = x
+			int8_t xMove = x;
 			int8_t yMove = y;
-			while(isPositionValidForOccupying(xMove, yMove)) {
+			while(isPositionValidForOccupying(xMove, yMove, this->mapState)) {
 				xMove += dx[direction]; 
 				yMove += dy[direction];
 			}
@@ -107,7 +110,7 @@ int8_t GameState::getSheepNumberToDivide(int8_t xMove, int8_t yMove, int8_t x, i
 	int8_t sheepNumber = this->sheepState[x][y];
 	float areaMove = this->calculateArea(xMove, yMove);
 	float area = this->calculateArea(x, y);
-	int sheepNumberToDivide = std:max(int(sheepNumber * (areaMove / (areaMove + area))), 1);
+	int sheepNumberToDivide = std::max(int(sheepNumber * (areaMove / (areaMove + area))), 1);
 	return sheepNumberToDivide;			
 }
 
@@ -119,7 +122,7 @@ float GameState::calculateArea(int8_t x, int8_t y){
 		float area = 0;
 		int8_t xMove = x + dx[i];
 		int8_t yMove = y + dy[i];
-		if(isPositionValidForOccupying(xMove, yMove)) area = pow(this->dfs(xMove, yMove, visited, this->playerID), exponentDFSArea);
+		if(isPositionValidForOccupying(xMove, yMove, this->mapState)) area = pow(this->dfs(xMove, yMove, visited, this->playerID), exponentDFSArea);
 		totalArea += area;
 	}
 	return totalArea;
@@ -127,13 +130,13 @@ float GameState::calculateArea(int8_t x, int8_t y){
 
 // DFS 算連通面積，不可以走過，並且要是自己地盤或是空地
 int GameState::dfs(int8_t x, int8_t y, std::vector<std::vector<bool>>& visited, int8_t anyPlayerID){
-	if(visited[x][y] or !(mapState[x][y] == 0 or mapState[x][y] == anyPlayerID)) return 0;
+	if(visited[x][y] or !(this->mapState[x][y] == 0 or this->mapState[x][y] == anyPlayerID)) return 0;
 	visited[x][y] = true;
 	int area = 1;
 	for(int i = 1 ; i <= 4 ; ++i){
 		int8_t xMove = x + dxx[i];
 		int8_t yMove = y + dyy[i];
-		if(isPositionValidForOccupying(xMove, yMove)) area += this->dfs(xMove, yMove, visited, anyPlayerID);
+		if(isPositionValidForOccupying(xMove, yMove, this->mapState)) area += this->dfs(xMove, yMove, visited, anyPlayerID);
 	}
 	return area;
 }
@@ -150,26 +153,26 @@ GameState GameState::applyMove(const Move& move, const GameState& state){
 	return newState;
 }
 
-int Minimax(int depth, int alpha, int beta, int playerID){
+int GameState::Minimax(int depth, int alpha, int beta, int playerID){
 	if(depth == 0) return this->evaluate();
+
 	if(playerID == this->playerID){
-		int maxEval = INT_MIN;
+		int maxEvaluation = INT_MIN;
 		for(auto& move : this->getWhereToMoves()){
 			GameState newState = this->applyMove(move, *this);
-			int evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
-			maxEvaluation = std:max(maxEvaluation, evaluation);
-			alpha = std:max(alpha, evaluation);
+			int evaluation = newState.Minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
+			maxEvaluation = std::max(maxEvaluation, evaluation);
+			alpha = std::max(alpha, evaluation);
 			if(beta <= alpha) break;
 		}
 		return maxEvaluation;
-	}
-	else{
-		int minEval = INT_MAX;
+	}else{
+		int minEvaluation = INT_MAX;
 		for(auto& move : this->getWhereToMoves()){
 			GameState newState = this->applyMove(move, *this);
-			int evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
-			minEvaluation = min(minEvaluation, evaluation);
-			beta = min(beta, evaluation);
+			int evaluation = newState.Minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
+			minEvaluation = std::min(minEvaluation, evaluation);
+			beta = std::min(beta, evaluation);
 			if(beta <= alpha) break;
 		}
 		return minEvaluation;
@@ -177,13 +180,13 @@ int Minimax(int depth, int alpha, int beta, int playerID){
 }
 
 // 計算面積起始點要是某個玩家的地盤，並且沒有走過
-int evaluate(){
+int GameState::evaluate(){
 	std::vector<std::vector<bool>> visited(MAXGRID, std::vector<bool>(MAXGRID, false));
 	std::vector<float> playerArea(5, 0);
 	playerArea[0] = -1;
 	for(int i = 0 ; i < MAXGRID ; ++i){
 		for(int j = 0 ; j < MAXGRID ; ++j){
-			anyPlayerID = this->mapState[i][j];
+			int8_t anyPlayerID = this->mapState[i][j];
 			if(visited[i][j] or anyPlayerID == 0 or anyPlayerID == -1) continue;
 			float area = pow(this->dfs(i, j, visited, anyPlayerID), exponentEvaluate);
 			playerArea[anyPlayerID] += area;
@@ -239,11 +242,11 @@ std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
 			for(int i = 1 ; i <= 9 ; i++){
 				if(i == 5) continue;
 				int newX = x + dx[i], newY = y + dy[i];
-				if(!isPositionValidForOccupying(newX, newY)) continue;
+				if(!isPositionValidForOccupying(newX, newY, mapStat)) continue;
 				numEmpty++;
 				//周圍延伸距離
 				int lenSurround = 0;
-				while(isPositionValidForOccupying(newX, newY)){
+				while(isPositionValidForOccupying(newX, newY, mapStat)){
 					lenSurround++;
 					newX += dx[i];
 					newY += dy[i];
