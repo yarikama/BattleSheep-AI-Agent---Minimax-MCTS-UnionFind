@@ -1,5 +1,5 @@
 1
-./sample/Sample_1.exe
+./sample/Sample.exe
 2
 ./sample/Sample_2.exe
 3

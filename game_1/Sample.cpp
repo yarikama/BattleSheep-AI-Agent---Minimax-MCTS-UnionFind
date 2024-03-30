@@ -17,39 +17,39 @@
 #define exponentEvaluate 1.25
 
 // 8個方向 
-int8_t dx[] = {0, -1, 0, 1, -1, 0, 1, -1, 0, 1};
-int8_t dy[] = {0, 1, 1, 1, 0, 0, 0, -1, -1, -1};
+int dx[] = {0, -1, 0, 1, -1, 0, 1, -1, 0, 1};
+int dy[] = {0, 1, 1, 1, 0, 0, 0, -1, -1, -1};
 
 // 4個方向
-int8_t dxx[] = {-1, 0, 1, 0};
-int8_t dyy[] = {0, 1, 0, -1};
+int dxx[] = {-1, 0, 1, 0};
+int dyy[] = {0, 1, 0, -1};
 
-inline bool isPositionValid(int8_t x, int8_t y) { return x >= 0 && x < MAXGRID && y >= 0 && y < MAXGRID; }
+inline bool isPositionValid(int x, int y) { return x >= 0 && x < MAXGRID && y >= 0 && y < MAXGRID; }
 template<typename T>
-inline bool isPositionValidForOccupying(int8_t x, int8_t y, T mapState[MAXGRID][MAXGRID]) {return isPositionValid(x, y) && mapState[x][y] == 0; }
+inline bool isPositionValidForOccupying(int x, int y, T mapState[MAXGRID][MAXGRID]) {return isPositionValid(x, y) && mapState[x][y] == 0; }
 // 移動方式
 struct Move{
-	int8_t x;
-	int8_t y;
-	int8_t subSheepNumber;
-	int8_t direction;
-	int8_t displacement;
+	int x;
+	int y;
+	int subSheepNumber;
+	int direction;
+	int displacement;
 };
 
 typedef struct Move Move;
-typedef std::pair<int8_t, int8_t> sheepBlock; 
+typedef std::pair<int, int> sheepBlock; 
 
 
 
 // 版面資訊：棋盤狀態、羊群分布狀態、玩家ID、我的羊群位置（Stack）
 class GameState{
 	private:
-		int8_t playerID;
-		int8_t mapState[MAXGRID][MAXGRID];
-		int8_t sheepState[MAXGRID][MAXGRID];
+		int playerID;
+		int mapState[MAXGRID][MAXGRID];
+		int sheepState[MAXGRID][MAXGRID];
 		std::vector<sheepBlock> mySheepBlocks;
 	public:
-		GameState(int8_t playerID, int8_t mapState[MAXGRID][MAXGRID], int8_t sheepState[MAXGRID][MAXGRID], sheepBlock& initSheepBlock){
+		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], sheepBlock& initSheepBlock){
 			this->playerID = playerID;
 			std::copy(&mapState[0][0], &mapState[0][0] + MAXGRID * MAXGRID, &this->mapState[0][0]);
 			std::copy(&sheepState[0][0], &sheepState[0][0] + MAXGRID * MAXGRID, &this->sheepState[0][0]);
@@ -57,14 +57,14 @@ class GameState{
 			mapState[initSheepBlock.first][initSheepBlock.second] = playerID;
 			sheepState[initSheepBlock.first][initSheepBlock.second] = 16;
 		}
-		inline int8_t getPlayerID() { return this->playerID; }
-		inline int8_t (*getMapState())[MAXGRID] { return this->mapState; }
-		inline int8_t (*getSheepState())[MAXGRID] { return this->sheepState; }
+		inline int getPlayerID() { return this->playerID; }
+		inline int (*getMapState())[MAXGRID] { return this->mapState; }
+		inline int (*getSheepState())[MAXGRID] { return this->sheepState; }
 		inline std::vector<sheepBlock> getMySheepBlocks() { return this->mySheepBlocks; }
 		std::vector<Move> getWhereToMoves();
-		int8_t getSheepNumberToDivide(int8_t xMove, int8_t yMove, int8_t x, int8_t y);
-		float calculateArea(int8_t x, int8_t y);
-		int dfs(int8_t x, int8_t y, std::vector<std::vector<bool>>& visited, int8_t anyPlayerID);
+		int getSheepNumberToDivide(int xMove, int yMove, int x, int y);
+		float calculateArea(int x, int y);
+		int dfs(int x, int y, std::vector<std::vector<bool>>& visited, int anyPlayerID);
 		GameState applyMove(const Move& move, const GameState& state);
 		int Minimax(int depth, int alpha, int beta, int playerID);
 		int evaluate();
@@ -82,21 +82,21 @@ std::vector<Move> GameState::getWhereToMoves(){
 	for(auto& sheepBlock : this->mySheepBlocks){
 
 		// 找出我有羊群的位置
-		int8_t x = sheepBlock.first, y = sheepBlock.second;
-		int8_t sheepNumber = this->sheepState[x][y];
+		int x = sheepBlock.first, y = sheepBlock.second;
+		int sheepNumber = this->sheepState[x][y];
 		if(sheepNumber <= 1) continue;
 
 		// 找出所有羊群各自可以走到底的地方（不能是自己）
-		for(int8_t direction = 1; direction <= 9; ++direction){
+		for(int direction = 1; direction <= 9; ++direction){
 			if(direction == 5) continue;
-			int8_t xMove = x;
-			int8_t yMove = y;
+			int xMove = x;
+			int yMove = y;
 			while(isPositionValidForOccupying(xMove, yMove, this->mapState)) {
 				xMove += dx[direction]; 
 				yMove += dy[direction];
 			}
 			if(xMove == x && yMove == y) continue;
-			int8_t subSheepNumber = this->getSheepNumberToDivide(xMove, yMove, x, y);
+			int subSheepNumber = this->getSheepNumberToDivide(xMove, yMove, x, y);
 			moves.emplace_back(Move{x, y, subSheepNumber, direction, abs(xMove - x)});
 		}
 	}
@@ -106,8 +106,8 @@ std::vector<Move> GameState::getWhereToMoves(){
 
 // 這裡的函數算法會依據地圖特性為羊群進行分割
 // 使用 DFS 兩邊的連通面積得分 再根據得分比例決定要分割多少羊群
-int8_t GameState::getSheepNumberToDivide(int8_t xMove, int8_t yMove, int8_t x, int8_t y){
-	int8_t sheepNumber = this->sheepState[x][y];
+int GameState::getSheepNumberToDivide(int xMove, int yMove, int x, int y){
+	int sheepNumber = this->sheepState[x][y];
 	float areaMove = this->calculateArea(xMove, yMove);
 	float area = this->calculateArea(x, y);
 	int sheepNumberToDivide = std::max(int(sheepNumber * (areaMove / (areaMove + area))), 1);
@@ -115,13 +115,13 @@ int8_t GameState::getSheepNumberToDivide(int8_t xMove, int8_t yMove, int8_t x, i
 }
 
 // 加總連通面積1.25次方
-float GameState::calculateArea(int8_t x, int8_t y){
+float GameState::calculateArea(int x, int y){
 	std::vector<std::vector<bool>> visited(3, std::vector<bool>(3, false));
 	float totalArea = 0;
 	for(int i = 1 ; i <= 9 ; ++i){
 		float area = 0;
-		int8_t xMove = x + dx[i];
-		int8_t yMove = y + dy[i];
+		int xMove = x + dx[i];
+		int yMove = y + dy[i];
 		if(isPositionValidForOccupying(xMove, yMove, this->mapState)) area = pow(this->dfs(xMove, yMove, visited, this->playerID), exponentDFSArea);
 		totalArea += area;
 	}
@@ -129,13 +129,13 @@ float GameState::calculateArea(int8_t x, int8_t y){
 }
 
 // DFS 算連通面積，不可以走過，並且要是自己地盤或是空地
-int GameState::dfs(int8_t x, int8_t y, std::vector<std::vector<bool>>& visited, int8_t anyPlayerID){
+int GameState::dfs(int x, int y, std::vector<std::vector<bool>>& visited, int anyPlayerID){
 	if(visited[x][y] or !(this->mapState[x][y] == 0 or this->mapState[x][y] == anyPlayerID)) return 0;
 	visited[x][y] = true;
 	int area = 1;
 	for(int i = 1 ; i <= 4 ; ++i){
-		int8_t xMove = x + dxx[i];
-		int8_t yMove = y + dyy[i];
+		int xMove = x + dxx[i];
+		int yMove = y + dyy[i];
 		if(isPositionValidForOccupying(xMove, yMove, this->mapState)) area += this->dfs(xMove, yMove, visited, anyPlayerID);
 	}
 	return area;
@@ -143,9 +143,9 @@ int GameState::dfs(int8_t x, int8_t y, std::vector<std::vector<bool>>& visited, 
 
 GameState GameState::applyMove(const Move& move, const GameState& state){
 	GameState newState = state;
-	int8_t x = move.x, y = move.y;
-	int8_t xMove = x + dx[move.direction] * move.displacement;
-	int8_t yMove = y + dy[move.direction] * move.displacement;
+	int x = move.x, y = move.y;
+	int xMove = x + dx[move.direction] * move.displacement;
+	int yMove = y + dy[move.direction] * move.displacement;
 	newState.mapState[xMove][yMove] = this->playerID;
 	newState.sheepState[x][y] -= move.subSheepNumber;
 	newState.sheepState[xMove][yMove] = move.subSheepNumber;
@@ -186,7 +186,7 @@ int GameState::evaluate(){
 	playerArea[0] = -1;
 	for(int i = 0 ; i < MAXGRID ; ++i){
 		for(int j = 0 ; j < MAXGRID ; ++j){
-			int8_t anyPlayerID = this->mapState[i][j];
+			int anyPlayerID = this->mapState[i][j];
 			if(visited[i][j] or anyPlayerID == 0 or anyPlayerID == -1) continue;
 			float area = pow(this->dfs(i, j, visited, anyPlayerID), exponentEvaluate);
 			playerArea[anyPlayerID] += area;
@@ -231,7 +231,7 @@ std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
 			//檢查是否為場地邊緣
 			bool isEdge = false;
 			for(int i = 0 ; i < 4 ; i++){
-				int8_t newX = x + dxx[i], newY = y + dyy[i];
+				int newX = x + dxx[i], newY = y + dyy[i];
 				if(!isPositionValid(newX, newY)) continue;
 				if(mapStat[newX][newY] == -1) isEdge = true;
 			}
@@ -287,17 +287,30 @@ std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
 			4 X 6
 			7 8 9
 */
-std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID])
+std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], sheepBlock sb)
 {
-
 	std::vector<int> step;
 	step.resize(4);
+	GameState gameState(playerID, mapStat, sheepStat, sb);
+	int depth = 6;
+	int bestScore = INT_MIN;
+    Move bestMove;
+    for (auto& move : gameState.getWhereToMoves()) {
+        GameState newState = gameState.applyMove(move, gameState);
+        int score = newState.Minimax(depth, INT_MIN, INT_MAX, playerID);
+        if (score > bestScore) {
+            bestScore = score;
+            bestMove = move;
+        }
+    }
 
-	/*
-		Write your code here
-	*/
-    
-    return step;
+    // 返回最佳移動
+    step[0] = bestMove.x;
+    step[1] = bestMove.y;
+    step[2] = bestMove.subSheepNumber;
+    step[3] = bestMove.direction;
+
+    return step;    
 }
 
 int main()
@@ -316,8 +329,7 @@ int main()
 	{
 		if (GetBoard(id_package, mapStat, sheepStat))
 			break;
-
-		std::vector<int> step = GetStep(playerID,mapStat,sheepStat);
+		std::vector<int> step = GetStep(playerID, mapStat, sheepStat, std::make_pair(init_pos[0], init_pos[1]));
 		SendStep(id_package, step);
 	}
 }
