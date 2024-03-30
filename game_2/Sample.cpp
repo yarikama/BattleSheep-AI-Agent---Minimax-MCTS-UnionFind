@@ -8,8 +8,8 @@
 
 #define MAXGRID 15
 #define powSurroundLen 1.5
-#define weightSurroundLen 1.5
-#define weightEmpty 2
+#define weightSurroundLen 1
+#define weightEmpty 2.5
 
 // 8個方向 or 4個方向
 int8_t dx[] = {0, -1, 0, 1, -1, 0, 1, -1, 0, 1};
@@ -90,7 +90,7 @@ std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
 	std::vector<int> init_pos;
 	init_pos.resize(2);
 
-	GameInit gameInit();
+	GameInit gameInit;
     init_pos = gameInit.getPosition(mapStat);
     
     return init_pos;
