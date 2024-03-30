@@ -177,7 +177,7 @@ int GameState::getSheepNumberToDivide(int xMove, int yMove, int x, int y){
 	int sheepNumber = this->sheepState[x][y];
 	float areaMove = this->calculateArea(xMove, yMove);
 	float area = this->calculateArea(x, y);
-	int sheepNumberToDivide = std::max(int(sheepNumber * (areaMove / (areaMove + area))), 1);
+	int sheepNumberToDivide = std::min(std::max(int(sheepNumber * (areaMove / (areaMove + area))), 1) , sheepNumber - 1);
 	return sheepNumberToDivide;			
 }
 
