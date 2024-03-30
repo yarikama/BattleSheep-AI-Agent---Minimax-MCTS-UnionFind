@@ -18,20 +18,16 @@ int8_t dxx[] = {-1, 0, 1, 0};
 int8_t dyy[] = {0, 1, 0, -1};
 
 class GameInit{
-	private:
-		int mapState[MAXGRID][MAXGRID];
 	public:
-		GameInit(int mapStat[MAXGRID][MAXGRID]){
-			memcpy(this->mapState, mapStat, sizeof(int) * MAXGRID * MAXGRID);
-		}
-		std::vector<int> getPosition();
+		GameInit(){}
+		std::vector<int> getPosition(int mapStat[MAXGRID][MAXGRID]);
 };
 
-std::vector<int> GameInit::getPosition(){
+std::vector<int> GameInit::getPosition(int mapStat[MAXGRID][MAXGRID]){
 	printf("my gamestate\n");
 	for(int y = 0; y < MAXGRID; y++){
 		for(int x = 0; x < MAXGRID; x++){
-			printf("%d ", this->mapState[x][y]);
+			printf("%d ", mapStat[x][y]);
 		}
 		printf("\n\n");
 	}
@@ -40,13 +36,13 @@ std::vector<int> GameInit::getPosition(){
 	for(int y = 0; y < MAXGRID; y++){
 		for(int x = 0; x < MAXGRID; x++){
 			//檢查是否為障礙或其他player
-			if(this->mapState[x][y] != 0) continue;
+			if(mapStat[x][y] != 0) continue;
 			//檢查是否為場地邊緣
 			bool isEdge = false;
 			for(int i = 0 ; i < 4 ; i++){
 				int8_t newX = x + dxx[i], newY = y + dyy[i];
 				if(newX < 0 || newX >= MAXGRID || newY < 0 || newY >= MAXGRID) continue;
-				if(this->mapState[newX][newY] == -1) isEdge = true;
+				if(mapStat[newX][newY] == -1) isEdge = true;
 			}
 			//周圍空格數、周圍延伸距離
 			int numEmpty = 0;
@@ -54,11 +50,11 @@ std::vector<int> GameInit::getPosition(){
 			for(int i = 1 ; i <= 9 && i != 5 ; i++){
 				int newX = x + dx[i], newY = y + dy[i];
 				if(newX < 0 || newX >= MAXGRID || newY < 0 || newY >= MAXGRID) continue;
-				if(this->mapState[newX][newY] == 0) numEmpty++;
+				if(mapStat[newX][newY] == 0) numEmpty++;
 				//周圍延伸距離
 				int lenSurround = 0;
 				while(newY >= 0 && newY < MAXGRID && newX >= 0 && newX < MAXGRID){
-					if(this->mapState[newX][newY] != 0) break;
+					if(mapStat[newX][newY] != 0) break;
 					lenSurround++;
 					newX += dx[i];
 					newY += dy[i];
@@ -94,8 +90,8 @@ std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
 	std::vector<int> init_pos;
 	init_pos.resize(2);
 
-	GameInit gameInit(mapStat);
-    init_pos = gameInit.getPosition();
+	GameInit gameInit();
+    init_pos = gameInit.getPosition(mapStat);
     
     return init_pos;
 }
