@@ -15,7 +15,7 @@
 #define weightSurroundLen 1
 #define weightEmptyNum 3
 #define rewardOpponentNear 10
-#define rewardOpponentFar 10
+#define rewardOpponentFar 5
 #define exponentDFSArea 1.15
 #define exponentEvaluate 3
 #define minimaxDepth 5
@@ -125,21 +125,25 @@ void scorePosition(int x, int y, int mapStat[MAXGRID][MAXGRID], int& scoreEmptyN
 
 int scoreOpponentDistance(int x, int y, int mapStat[MAXGRID][MAXGRID], int playerID) {
     int opponentDistance = INT_MAX;
-    for (int i = 0; i < MAXGRID; i++) {
-        for (int j = 0; j < MAXGRID; j++) {
-            if (mapStat[i][j] != playerID && mapStat[i][j] > 0) {
-                int distance = abs(i - x) + abs(j - y);
+	bool haveOpponent = false;
+    for (int iy = 0; iy < MAXGRID; iy++) {
+        for (int ix = 0; ix < MAXGRID; ix++) {
+            if (mapStat[ix][iy] != playerID && mapStat[ix][iy] > 0) {
+				haveOpponent = true;
+                int distance = std::max(abs(ix - x), abs(iy - y));
+				fprintf(outfile, "opponent: (%d, %d), distance = %d\n", ix, iy, distance);
                 opponentDistance = std::min(opponentDistance, distance);
             }
         }
     }
+	if(!haveOpponent) return -1;
     return opponentDistance;
 }
 
 std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID]) {
     std::vector<int> init_pos;
     init_pos.resize(2);
-    int maxScore = 0;
+    float maxScore = 0;
 
     for (int y = 0; y < MAXGRID; y++) {
         for (int x = 0; x < MAXGRID; x++) {
@@ -165,13 +169,16 @@ std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID]) {
             if (isEdge == false) continue;
 
 			//目標周圍空格多、周圍延伸距離短
-            int score = weightEmptyNum * scoreEmptyNum - weightSurroundLen * scoreSurroundNum / 8;
+            float score = weightEmptyNum * scoreEmptyNum - weightSurroundLen * scoreSurroundNum / 8;
 
+			fprintf(outfile, "(%d, %d), score = (%d*%d - %d*%f/8)", x, y, weightEmptyNum, scoreEmptyNum, weightSurroundLen, scoreSurroundNum);
             // 根據與對手的距離調整分數
-            if (opponentDistance <= 2) {
+			if (opponentDistance <= 2 && opponentDistance >= 0) {
                 score -= rewardOpponentNear;  // 離對手太近,減少分數
+				fprintf(outfile, " - %d = %f, distance = %d\n", rewardOpponentNear, score, opponentDistance);
             } else if (opponentDistance >= 6) {
                 score += rewardOpponentFar;   // 離對手較遠,增加分數
+				fprintf(outfile, " - %d = %f, distance = %d\n", rewardOpponentFar, score, opponentDistance);
             }
 
             if (score > maxScore) {
@@ -184,59 +191,6 @@ std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID]) {
 
     return init_pos;
 }
-
-// std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID])
-// {
-// 	// printMap(mapStat);
-
-// 	std::vector<int> init_pos;
-// 	init_pos.resize(2);
-// 	int maxScore = 0;
-// 	for(int y = 0; y < MAXGRID; y++){
-// 		for(int x = 0; x < MAXGRID; x++){
-// 			//檢查是否為障礙或其他player
-// 			if(mapStat[x][y] != 0) continue;
-
-// 			//檢查是否為場地邊緣
-// 			bool isEdge = false;
-// 			for(int i = 0 ; i < 4 ; i++){
-// 				int newX = x + dxx[i], newY = y + dyy[i];
-// 				if(!isPositionValid(newX, newY)) continue;
-// 				if(mapStat[newX][newY] == -1) isEdge = true;
-// 			}
-
-// 			//周圍空格數、周圍延伸距離
-// 			int scoreEmptyNum = 0;
-// 			double scoreSurroundNum = 0;
-// 			for(int i = 1 ; i <= 9 ; i++){
-// 				if(i == 5) continue;
-// 				int newX = x + dx[i], newY = y + dy[i];
-// 				if(!isPositionValidForOccupying(newX, newY, mapStat)) continue;
-// 				scoreEmptyNum++;
-// 				//周圍延伸距離
-// 				int lenSurround = 0;
-// 				while(isPositionValidForOccupying(newX, newY, mapStat)){
-// 					lenSurround++;
-// 					newX += dx[i];
-// 					newY += dy[i];
-// 				}
-// 				scoreSurroundNum += pow(lenSurround, powSurroundLen);
-// 			}
-
-// 			//限定場地邊緣
-// 			if(isEdge == false) continue;
-
-// 			//目標周圍空格多、周圍延伸距離短
-// 			int score = weightEmptyNum * scoreEmptyNum - weightSurroundLen * scoreSurroundNum / 8;
-// 			if(score > maxScore){
-// 				maxScore = score;
-// 				init_pos[0] = x;
-// 				init_pos[1] = y;
-// 			}
-// 		}
-// 	}    
-//     return init_pos;
-// }
 
 
 // 版面資訊：棋盤狀態、羊群分布狀態、玩家ID、我的羊群位置（Stack）
