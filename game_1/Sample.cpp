@@ -160,22 +160,26 @@ class GameState{
 		int sheepState[MAXGRID][MAXGRID];
 		std::vector<sheepBlock> mySheepBlocks;
 	public:
-		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], std::vector<sheepBlock>& sheepBlocks){
+		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], std::vector<sheepBlock> sheepBlocks){
 			this->playerID = playerID;
 			std::copy(&mapState[0][0], &mapState[0][0] + MAXGRID * MAXGRID, &this->mapState[0][0]);
 			std::copy(&sheepState[0][0], &sheepState[0][0] + MAXGRID * MAXGRID, &this->sheepState[0][0]);
-			this->mySheepBlocks = std::ref(sheepBlocks);			
+			std::copy(sheepBlocks.begin(), sheepBlocks.end(), std::back_inserter(this->mySheepBlocks));
 		}
+
 		inline int getPlayerID() { return this->playerID; }
 		inline int (*getMapState())[MAXGRID] { return this->mapState; }
 		inline int (*getSheepState())[MAXGRID] { return this->sheepState; }
 		inline std::vector<sheepBlock> getMySheepBlocks() { return this->mySheepBlocks; }
+
 		std::vector<Move> getWhereToMoves();
 		int getSheepNumberToDivide(int xMove, int yMove, int x, int y);
 		float calculateArea(int x, int y);
 		int dfs(int x, int y, std::vector<std::vector<bool>>& visited, int anyPlayerID, int originX, int originY, bool nineNine);
-		GameState applyMove(Move& move, GameState& state);
-		int Minimax(int depth, int alpha, int beta, int playerID);
+
+		GameState applyMove(Move move, GameState state);
+		
+		int minimax(int depth, int alpha, int beta, int playerID);
 		int evaluate();
 };
 
@@ -255,7 +259,7 @@ int GameState::dfs(int x, int y, std::vector<std::vector<bool>>& visited, int an
 	return area;
 }
 
-GameState GameState::applyMove(Move& move, GameState& state){
+GameState GameState::applyMove(Move move, GameState state){
 	GameState newState(state.playerID, state.mapState, state.sheepState, state.mySheepBlocks);
 	int x = move.x, y = move.y;
 	int xMove = x + dx[move.direction] * move.displacement;
@@ -266,14 +270,14 @@ GameState GameState::applyMove(Move& move, GameState& state){
 	return newState;
 }
 
-int GameState::Minimax(int depth, int alpha, int beta, int playerID){
+int GameState::minimax(int depth, int alpha, int beta, int playerID){
 	if(depth == 0) return this->evaluate();
 
 	if(playerID == this->playerID){
 		int maxEvaluation = INT_MIN;
 		for(auto& move : this->getWhereToMoves()){
 			GameState newState = this->applyMove(move, *this);
-			int evaluation = newState.Minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
+			int evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
 			maxEvaluation = std::max(maxEvaluation, evaluation);
 			alpha = std::max(alpha, evaluation);
 			if(beta <= alpha) break;
@@ -283,7 +287,7 @@ int GameState::Minimax(int depth, int alpha, int beta, int playerID){
 		int minEvaluation = INT_MAX;
 		for(auto& move : this->getWhereToMoves()){
 			GameState newState = this->applyMove(move, *this);
-			int evaluation = newState.Minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
+			int evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
 			minEvaluation = std::min(minEvaluation, evaluation);
 			beta = std::min(beta, evaluation);
 			if(beta <= alpha) break;
@@ -353,7 +357,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 	}
 	for (auto& move : availableMoves) {
 		GameState newState = gameState.applyMove(move, gameState);
-		int score = newState.Minimax(depth, INT_MIN, INT_MAX, playerID);
+		int score = newState.minimax(depth, INT_MIN, INT_MAX, playerID);
 		if (score > bestScore) {
 			bestScore = score;
 			bestMove = move;
