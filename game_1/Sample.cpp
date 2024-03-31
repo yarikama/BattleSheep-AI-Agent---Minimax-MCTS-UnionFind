@@ -31,8 +31,7 @@ int dyy[] = {0, 1, 0, -1};
 FILE* outfile;
 
 inline bool isPositionValid(int x, int y) { return x >= 0 && x < MAXGRID && y >= 0 && y < MAXGRID; }
-template<typename T>
-inline bool isPositionValidForOccupying(int x, int y, T mapState[MAXGRID][MAXGRID]) {return isPositionValid(x, y) && mapState[x][y] == 0; }
+inline bool isPositionValidForOccupying(int x, int y, int mapState[MAXGRID][MAXGRID]) {return isPositionValid(x, y) && mapState[x][y] == 0; }
 // 移動方式
 struct Move{
 	int x;
@@ -298,9 +297,6 @@ std::vector<Move> GameState::getWhereToMoves(){
 			}
 			if(xMove == x && yMove == y) continue;
 			int subSheepNumber = this->getSheepNumberToDivide(xMove, yMove, x, y);
-			if(!moves.empty() and moves.back().x == xMove and moves.back().y == yMove){
-				fprintf(outfile, "Duplicate move\n");
-			}
 			moves.emplace_back(Move{x, y, subSheepNumber, direction, std::max(abs(xMove - x), abs(yMove - y))});
 		}
 	}
@@ -326,7 +322,7 @@ std::vector<Move> GameState::getWhereToMovesEveryPosiblity(){
 			}
 			if(xMove == x && yMove == y) continue;
 			int displacement = std::max(abs(xMove - x), abs(yMove - y));
-			for(int subSheepNumber = 1; subSheepNumber < sheepNumber; ++subSheepNumber) moves.emplace_back(Move{x, y, subSheepNumber, direction, displacement});
+			for(int subSheepNumber = 1; subSheepNumber < sheepNumber; ++subSheepNumber) moves.emplace_back(Move{x, y, subSheepNumber, direction, displacement}); 
 		}
 	}
 	return moves;
@@ -462,7 +458,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 	int depth = minimaxDepth;
 	int bestScore = INT_MIN;
     Move bestMove;
-	std::vector<Move> availableMoves = gameState.getWhereToMoves();
+	std::vector<Move> availableMoves = gameState.getWhereToMovesEveryPosiblity();
 	if (availableMoves.empty()){
 		step[0] = -1;
 		step[1] = -1;
@@ -471,7 +467,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 	for (auto& move : availableMoves) {
 		GameState newState = gameState.applyMove(move, gameState);
 		int score = newState.minimax(depth, INT_MIN, INT_MAX, playerID);
-		fprintf(outfile, "\nMove: (x, y) = (%d, %d), (xMove, yMove, direction) = (%d, %d, %d), sheepNum = %d, (score, bestscore) = (%d, %d)\n", move.x, move.y, move.x + dx[move.direction] * move.displacement, move.y + dy[move.direction] * move.displacement, move.direction, move.subSheepNumber, score, bestScore);
+		// fprintf(outfile, "\nMove: (x, y) = (%d, %d), (xMove, yMove, direction) = (%d, %d, %d), sheepNum = %d, (score, bestscore) = (%d, %d)\n", move.x, move.y, move.x + dx[move.direction] * move.displacement, move.y + dy[move.direction] * move.displacement, move.direction, move.subSheepNumber, score, bestScore);
 		if (score > bestScore) {
 			bestScore = score;
 			bestMove = move;
@@ -485,7 +481,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 	step[4] = bestMove.displacement;
 	sb.push_back(std::make_pair(bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement));
 	fprintf(outfile, "\nStep: (x, y) = (%d, %d), (xMove, yMove, direction) = (%d, %d, %d), sheepNum = %d, bestscore = %d\n", bestMove.x, bestMove.y, bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement, bestMove.direction, bestMove.subSheepNumber, bestScore);
-	printMapAndSheep(mapStat, sheepStat);
+	// printMapAndSheep(mapStat, sheepStat);
 	printsb(sb);
     return step;    
 }
