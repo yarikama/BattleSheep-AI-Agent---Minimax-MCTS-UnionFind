@@ -178,7 +178,7 @@ class GameState{
 		int dfs(int x, int y, std::vector<std::vector<bool>>& visited, int anyPlayerID, int originX, int originY, bool nineNine);
 
 		GameState applyMove(Move move, GameState state);
-		
+
 		int minimax(int depth, int alpha, int beta, int playerID);
 		int evaluate();
 };
@@ -212,10 +212,6 @@ std::vector<Move> GameState::getWhereToMoves(){
 			moves.emplace_back(Move{x, y, subSheepNumber, direction, std::max(abs(xMove - x), abs(yMove - y))});
 		}
 	}
-	// fprintf(outfile, "WhereToMoves:\n");
-	// for(auto& move : moves) {
-	// 	fprintf(outfile, "(x, y) = (%d, %d), subSheepNumber = %d, (direction, displacement) = (%d, %d)\n", move.x, move.y, move.subSheepNumber, move.direction, move.displacement);
-	// }
 	return moves;
 }
 
@@ -370,7 +366,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
     step[3] = bestMove.direction;
 	step[4] = bestMove.displacement;
 	sb.push_back(std::make_pair(bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement));
-	fprintf(outfile, "\nStep: (x, y) = (%d, %d), sheepNum = %d,  (direction, displacement) = (%d, %d)\n", step[0], step[1], step[2], step[3], step[4]);
+	fprintf(outfile, "\nStep: (x, y) = (%d, %d), (xMove, yMove) = (%d, %d), sheepNum = %d\n", bestMove.x, bestMove.y, bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement, bestMove.subSheepNumber);
 	printMapAndSheep(mapStat, sheepStat);
 	printsb(sb);
     return step;    
