@@ -13,9 +13,12 @@
 #define MAXGRID 12
 #define powSurroundLen 1.5
 #define weightSurroundLen 1
-#define weightEmpty 3
+#define weightEmptyNum 3
+#define rewardOpponentNear 10
+#define rewardOpponentFar 10
 #define exponentDFSArea 1.15
 #define exponentEvaluate 3
+#define minimaxDepth 5
 
 // 8個方向 
 int dx[] = {0, -1, 0, 1, -1, 0, 1, -1, 0, 1};
@@ -99,58 +102,142 @@ void printsb(std::vector<sheepBlock> sb){
 	}
 }
 
-std::vector<int> InitPos(int mapStat[MAXGRID][MAXGRID])
-{
-	// printMap(mapStat);
+void scorePosition(int x, int y, int mapStat[MAXGRID][MAXGRID], int& scoreEmptyNum, double& scoreSurroundNum) {
+    scoreEmptyNum = 0;
+    scoreSurroundNum = 0;
 
-	std::vector<int> init_pos;
-	init_pos.resize(2);
-	int maxScore = 0;
-	for(int y = 0; y < MAXGRID; y++){
-		for(int x = 0; x < MAXGRID; x++){
+    for (int i = 1; i <= 9; i++) {
+        if (i == 5) continue;
+        int newX = x + dx[i], newY = y + dy[i];
+
+        if (!isPositionValidForOccupying(newX, newY, mapStat)) continue;
+        // 計算周圍空格數
+		scoreEmptyNum++;
+        // 計算周圍延伸距離
+        int lenSurround = 0;
+        while (isPositionValidForOccupying(newX, newY, mapStat)) {
+            lenSurround++;
+            newX += dx[i];
+            newY += dy[i];
+        }
+        scoreSurroundNum += pow(lenSurround, powSurroundLen);
+    }
+}
+
+int scoreOpponentDistance(int x, int y, int mapStat[MAXGRID][MAXGRID], int playerID) {
+    int opponentDistance = INT_MAX;
+    for (int i = 0; i < MAXGRID; i++) {
+        for (int j = 0; j < MAXGRID; j++) {
+            if (mapStat[i][j] != playerID && mapStat[i][j] > 0) {
+                int distance = abs(i - x) + abs(j - y);
+                opponentDistance = std::min(opponentDistance, distance);
+            }
+        }
+    }
+    return opponentDistance;
+}
+
+std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID]) {
+    std::vector<int> init_pos;
+    init_pos.resize(2);
+    int maxScore = 0;
+
+    for (int y = 0; y < MAXGRID; y++) {
+        for (int x = 0; x < MAXGRID; x++) {
 			//檢查是否為障礙或其他player
-			if(mapStat[x][y] != 0) continue;
+            if (mapStat[x][y] != 0) continue;
 
 			//檢查是否為場地邊緣
-			bool isEdge = false;
-			for(int i = 0 ; i < 4 ; i++){
-				int newX = x + dxx[i], newY = y + dyy[i];
-				if(!isPositionValid(newX, newY)) continue;
-				if(mapStat[newX][newY] == -1) isEdge = true;
-			}
+            bool isEdge = false;
+            for (int i = 0; i < 4; i++) {
+                int newX = x + dxx[i], newY = y + dyy[i];
+                if (!isPositionValid(newX, newY)) continue;
+                if (mapStat[newX][newY] == -1) isEdge = true;
+            }
 
-			//周圍空格數、周圍延伸距離
-			int numEmpty = 0;
-			double numSurround = 0;
-			for(int i = 1 ; i <= 9 ; i++){
-				if(i == 5) continue;
-				int newX = x + dx[i], newY = y + dy[i];
-				if(!isPositionValidForOccupying(newX, newY, mapStat)) continue;
-				numEmpty++;
-				//周圍延伸距離
-				int lenSurround = 0;
-				while(isPositionValidForOccupying(newX, newY, mapStat)){
-					lenSurround++;
-					newX += dx[i];
-					newY += dy[i];
-				}
-				numSurround += pow(lenSurround, powSurroundLen);
-			}
+			//分數1 : 周圍空格數、周圍延伸距離
+            int scoreEmptyNum;
+            double scoreSurroundNum;
+            scorePosition(x, y, mapStat, scoreEmptyNum, scoreSurroundNum);
+			//分數2 : 對手距離
+            int opponentDistance = scoreOpponentDistance(x, y, mapStat, playerID);
 
 			//限定場地邊緣
-			if(isEdge == false) continue;
+            if (isEdge == false) continue;
 
 			//目標周圍空格多、周圍延伸距離短
-			int score = weightEmpty * numEmpty - weightSurroundLen * numSurround / 8;
-			if(score > maxScore){
-				maxScore = score;
-				init_pos[0] = x;
-				init_pos[1] = y;
-			}
-		}
-	}    
+            int score = weightEmptyNum * scoreEmptyNum - weightSurroundLen * scoreSurroundNum / 8;
+
+            // 根據與對手的距離調整分數
+            if (opponentDistance <= 2) {
+                score -= rewardOpponentNear;  // 離對手太近,減少分數
+            } else if (opponentDistance >= 6) {
+                score += rewardOpponentFar;   // 離對手較遠,增加分數
+            }
+
+            if (score > maxScore) {
+                maxScore = score;
+                init_pos[0] = x;
+                init_pos[1] = y;
+            }
+        }
+    }
+
     return init_pos;
 }
+
+// std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID])
+// {
+// 	// printMap(mapStat);
+
+// 	std::vector<int> init_pos;
+// 	init_pos.resize(2);
+// 	int maxScore = 0;
+// 	for(int y = 0; y < MAXGRID; y++){
+// 		for(int x = 0; x < MAXGRID; x++){
+// 			//檢查是否為障礙或其他player
+// 			if(mapStat[x][y] != 0) continue;
+
+// 			//檢查是否為場地邊緣
+// 			bool isEdge = false;
+// 			for(int i = 0 ; i < 4 ; i++){
+// 				int newX = x + dxx[i], newY = y + dyy[i];
+// 				if(!isPositionValid(newX, newY)) continue;
+// 				if(mapStat[newX][newY] == -1) isEdge = true;
+// 			}
+
+// 			//周圍空格數、周圍延伸距離
+// 			int scoreEmptyNum = 0;
+// 			double scoreSurroundNum = 0;
+// 			for(int i = 1 ; i <= 9 ; i++){
+// 				if(i == 5) continue;
+// 				int newX = x + dx[i], newY = y + dy[i];
+// 				if(!isPositionValidForOccupying(newX, newY, mapStat)) continue;
+// 				scoreEmptyNum++;
+// 				//周圍延伸距離
+// 				int lenSurround = 0;
+// 				while(isPositionValidForOccupying(newX, newY, mapStat)){
+// 					lenSurround++;
+// 					newX += dx[i];
+// 					newY += dy[i];
+// 				}
+// 				scoreSurroundNum += pow(lenSurround, powSurroundLen);
+// 			}
+
+// 			//限定場地邊緣
+// 			if(isEdge == false) continue;
+
+// 			//目標周圍空格多、周圍延伸距離短
+// 			int score = weightEmptyNum * scoreEmptyNum - weightSurroundLen * scoreSurroundNum / 8;
+// 			if(score > maxScore){
+// 				maxScore = score;
+// 				init_pos[0] = x;
+// 				init_pos[1] = y;
+// 			}
+// 		}
+// 	}    
+//     return init_pos;
+// }
 
 
 // 版面資訊：棋盤狀態、羊群分布狀態、玩家ID、我的羊群位置（Stack）
@@ -372,7 +459,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 	std::vector<int> step;
 	step.resize(5);
 	GameState gameState(playerID, mapStat, sheepStat, sb);
-	int depth = 10;
+	int depth = minimaxDepth;
 	int bestScore = INT_MIN;
     Move bestMove;
 	std::vector<Move> availableMoves = gameState.getWhereToMoves();
@@ -416,7 +503,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 
 		// player initial
 		GetMap(id_package, playerID, mapStat);
-		std::vector<int> init_pos = InitPos(mapStat);
+		std::vector<int> init_pos = InitPos(playerID, mapStat);
 		SendInitPos(id_package,init_pos);
 		sheepBlocks.emplace_back(std::make_pair(init_pos[0], init_pos[1]));
 
