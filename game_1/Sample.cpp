@@ -123,11 +123,11 @@ class GameState{
 		int sheepState[MAXGRID][MAXGRID];
 		std::vector<sheepBlock> mySheepBlocks;
 	public:
-		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], std::vector<sheepBlock>& sheepBlocks){
+		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], std::vector<sheepBlock> sheepBlocks){
 			this->playerID = playerID;
 			std::copy(&mapState[0][0], &mapState[0][0] + MAXGRID * MAXGRID, &this->mapState[0][0]);
 			std::copy(&sheepState[0][0], &sheepState[0][0] + MAXGRID * MAXGRID, &this->sheepState[0][0]);
-			this->mySheepBlocks = std::ref(sheepBlocks);			
+    		std::copy(sheepBlocks.begin(), sheepBlocks.end(), std::back_inserter(this->mySheepBlocks));
 		}
 		inline int getPlayerID() { return this->playerID; }
 		inline int (*getMapState())[MAXGRID] { return this->mapState; }
@@ -137,7 +137,7 @@ class GameState{
 		int getSheepNumberToDivide(int xMove, int yMove, int x, int y);
 		float calculateArea(int x, int y);
 		int dfs(int x, int y, std::vector<std::vector<bool>>& visited, int anyPlayerID, int originX, int originY, bool nineNine);
-		GameState applyMove(const Move& move, const GameState& state);
+		GameState applyMove(Move move, GameState state);
 		int Minimax(int depth, int alpha, int beta, int playerID);
 		int evaluate();
 };
@@ -214,8 +214,8 @@ int GameState::dfs(int x, int y, std::vector<std::vector<bool>>& visited, int an
 	return area;
 }
 
-GameState GameState::applyMove(const Move& move, const GameState& state){
-	GameState newState = state;
+GameState GameState::applyMove(Move move, GameState state){
+	GameState newState(state.playerID, state.mapState, state.sheepState, state.mySheepBlocks);
 	int x = move.x, y = move.y;
 	int xMove = x + dx[move.direction] * move.displacement;
 	int yMove = y + dy[move.direction] * move.displacement;
@@ -296,7 +296,7 @@ int GameState::evaluate(){
 			4 X 6
 			7 8 9
 */
-std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], std::vector<sheepBlock>& sheepBlocks)
+std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], std::vector<sheepBlock> sheepBlocks)
 {
 	std::vector<int> step;
 	step.resize(5);
