@@ -123,11 +123,11 @@ class GameState{
 		int sheepState[MAXGRID][MAXGRID];
 		std::vector<sheepBlock> mySheepBlocks;
 	public:
-		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], std::vector<sheepBlock> sheepBlocks){
+		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], std::vector<sheepBlock>& sheepBlocks){
 			this->playerID = playerID;
 			std::copy(&mapState[0][0], &mapState[0][0] + MAXGRID * MAXGRID, &this->mapState[0][0]);
 			std::copy(&sheepState[0][0], &sheepState[0][0] + MAXGRID * MAXGRID, &this->sheepState[0][0]);
-			this->mySheepBlocks = sheepBlocks;			
+			this->mySheepBlocks = std::ref(sheepBlocks);			
 		}
 		inline int getPlayerID() { return this->playerID; }
 		inline int (*getMapState())[MAXGRID] { return this->mapState; }
@@ -299,7 +299,7 @@ int GameState::evaluate(){
 std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], std::vector<sheepBlock>& sheepBlocks)
 {
 	std::vector<int> step;
-	step.resize(4);
+	step.resize(5);
 	GameState gameState(playerID, mapStat, sheepStat, sheepBlocks);
 	int depth = 3;
 	int bestScore = INT_MIN;
