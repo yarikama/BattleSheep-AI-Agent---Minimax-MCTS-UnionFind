@@ -8,13 +8,14 @@
 #include <math.h>
 #include <algorithm>
 #include <limits.h>
+#include <limits>
 
 #define MAXGRID 12
 #define powSurroundLen 1.5
 #define weightSurroundLen 1
 #define weightEmpty 3
 #define exponentDFSArea 1.15
-#define exponentEvaluate 1.25
+#define exponentEvaluate 3
 
 // 8個方向 
 int dx[] = {0, -1, 0, 1, -1, 0, 1, -1, 0, 1};
@@ -172,6 +173,7 @@ class GameState{
 		inline int (*getSheepState())[MAXGRID] { return this->sheepState; }
 		inline std::vector<sheepBlock> getMySheepBlocks() { return this->mySheepBlocks; }
 
+		std::vector<Move> getWhereToMovesEveryPosiblity();
 		std::vector<Move> getWhereToMoves();
 		int getSheepNumberToDivide(int xMove, int yMove, int x, int y);
 		float calculateArea(int x, int y);
@@ -179,8 +181,8 @@ class GameState{
 
 		GameState applyMove(Move move, GameState state);
 
-		int minimax(int depth, int alpha, int beta, int playerID);
-		int evaluate();
+		float minimax(int depth, float alpha, float beta, int playerID);
+		float evaluate();
 };
 
 /* 找可以走的地方 
@@ -209,13 +211,39 @@ std::vector<Move> GameState::getWhereToMoves(){
 			}
 			if(xMove == x && yMove == y) continue;
 			int subSheepNumber = this->getSheepNumberToDivide(xMove, yMove, x, y);
+			if(!moves.empty() and moves.back().x == xMove and moves.back().y == yMove){
+				fprintf(outfile, "Duplicate move\n");
+			}
 			moves.emplace_back(Move{x, y, subSheepNumber, direction, std::max(abs(xMove - x), abs(yMove - y))});
 		}
 	}
 	return moves;
 }
 
+std::vector<Move> GameState::getWhereToMovesEveryPosiblity(){
+	std::vector<Move> moves;
+	for(auto& sheepBlock : this->mySheepBlocks){
+		// 找出我有羊群的位置
+		int x = sheepBlock.first, y = sheepBlock.second;
+		int sheepNumber = this->sheepState[x][y];
+		if(sheepNumber <= 1) continue;
 
+		// 找出所有羊群各自可以走到底的地方（不能是自己）
+		for(int direction = 1; direction <= 9; ++direction){
+			if(direction == 5) continue;
+			int xMove = x;
+			int yMove = y;
+			while(isPositionValidForOccupying(xMove + dx[direction], yMove + dy[direction], this->mapState)) {
+				xMove += dx[direction]; 
+				yMove += dy[direction];
+			}
+			if(xMove == x && yMove == y) continue;
+			int displacement = std::max(abs(xMove - x), abs(yMove - y));
+			for(int subSheepNumber = 1; subSheepNumber < sheepNumber; ++subSheepNumber) moves.emplace_back(Move{x, y, subSheepNumber, direction, displacement});
+		}
+	}
+	return moves;
+}
 // 這裡的函數算法會依據地圖特性為羊群進行分割
 // 使用 DFS 兩邊的連通面積得分 再根據得分比例決定要分割多少羊群
 int GameState::getSheepNumberToDivide(int xMove, int yMove, int x, int y){
@@ -266,24 +294,25 @@ GameState GameState::applyMove(Move move, GameState state){
 	return newState;
 }
 
-int GameState::minimax(int depth, int alpha, int beta, int playerID){
-	if(depth == 0) return this->evaluate();
-
+float GameState::minimax(int depth, float alpha, float beta, int playerID){
+	std::vector<Move> availableMoves = this->getWhereToMovesEveryPosiblity();
+	if(depth == 0 or availableMoves.empty()) return this->evaluate();
 	if(playerID == this->playerID){
-		int maxEvaluation = INT_MIN;
-		for(auto& move : this->getWhereToMoves()){
+        float maxEvaluation = std::numeric_limits<float>::min();
+		for(auto& move : availableMoves){
 			GameState newState = this->applyMove(move, *this);
-			int evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
+			float evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
 			maxEvaluation = std::max(maxEvaluation, evaluation);
 			alpha = std::max(alpha, evaluation);
 			if(beta <= alpha) break;
 		}
 		return maxEvaluation;
-	}else{
-		int minEvaluation = INT_MAX;
-		for(auto& move : this->getWhereToMoves()){
+	}
+	else{
+        float minEvaluation = std::numeric_limits<float>::max();
+		for(auto& move : availableMoves){
 			GameState newState = this->applyMove(move, *this);
-			int evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
+			float  evaluation = newState.minimax(depth - 1, alpha, beta, (playerID % 4) + 1);
 			minEvaluation = std::min(minEvaluation, evaluation);
 			beta = std::min(beta, evaluation);
 			if(beta <= alpha) break;
@@ -293,21 +322,22 @@ int GameState::minimax(int depth, int alpha, int beta, int playerID){
 }
 
 // 計算面積起始點要是某個玩家的地盤，並且沒有走過
-int GameState::evaluate(){
+float GameState::evaluate(){
 	std::vector<std::vector<bool>> visited(MAXGRID, std::vector<bool>(MAXGRID, false));
 	std::vector<float> playerArea(5, 0);
 	playerArea[0] = -1;
-	for(int i = 0 ; i < MAXGRID ; ++i){
-		for(int j = 0 ; j < MAXGRID ; ++j){
-			int anyPlayerID = this->mapState[i][j];
-			if(visited[i][j] or anyPlayerID == 0 or anyPlayerID == -1) continue;
-			float area = pow(this->dfs(i, j, visited, anyPlayerID, i, j, 0), exponentEvaluate);
+	for(int y = 0 ; y < MAXGRID ; ++y){
+		for(int x = 0 ; x < MAXGRID ; ++x){
+			int anyPlayerID = this->mapState[x][y];
+			if(visited[x][y] or anyPlayerID == 0 or anyPlayerID == -1) continue;
+			float area = pow(this->dfs(x, y, visited, anyPlayerID, x, y, 0), exponentEvaluate);
 			playerArea[anyPlayerID] += area;
 		}
 	}
-	int rank = 4;
-	for(int i = 1 ; i <= 4 ; ++i) if(playerArea[i] < playerArea[this->playerID]) --rank;
-	return -1 * rank;
+	return playerArea[this->playerID];
+	// int rank = 4;
+	// for(int i = 1 ; i <= 4 ; ++i) if(playerArea[i] < playerArea[this->playerID]) --rank;
+	// return -1 * rank;
 }
 /*
     選擇起始位置
@@ -342,7 +372,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 	std::vector<int> step;
 	step.resize(5);
 	GameState gameState(playerID, mapStat, sheepStat, sb);
-	int depth = 4;
+	int depth = 10;
 	int bestScore = INT_MIN;
     Move bestMove;
 	std::vector<Move> availableMoves = gameState.getWhereToMoves();
@@ -354,6 +384,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 	for (auto& move : availableMoves) {
 		GameState newState = gameState.applyMove(move, gameState);
 		int score = newState.minimax(depth, INT_MIN, INT_MAX, playerID);
+		fprintf(outfile, "\nMove: (x, y) = (%d, %d), (xMove, yMove, direction) = (%d, %d, %d), sheepNum = %d, (score, bestscore) = (%d, %d)\n", move.x, move.y, move.x + dx[move.direction] * move.displacement, move.y + dy[move.direction] * move.displacement, move.direction, move.subSheepNumber, score, bestScore);
 		if (score > bestScore) {
 			bestScore = score;
 			bestMove = move;
@@ -366,7 +397,7 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
     step[3] = bestMove.direction;
 	step[4] = bestMove.displacement;
 	sb.push_back(std::make_pair(bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement));
-	fprintf(outfile, "\nStep: (x, y) = (%d, %d), (xMove, yMove) = (%d, %d), sheepNum = %d\n", bestMove.x, bestMove.y, bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement, bestMove.subSheepNumber);
+	fprintf(outfile, "\nStep: (x, y) = (%d, %d), (xMove, yMove, direction) = (%d, %d, %d), sheepNum = %d, bestscore = %d\n", bestMove.x, bestMove.y, bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement, bestMove.direction, bestMove.subSheepNumber, bestScore);
 	printMapAndSheep(mapStat, sheepStat);
 	printsb(sb);
     return step;    
