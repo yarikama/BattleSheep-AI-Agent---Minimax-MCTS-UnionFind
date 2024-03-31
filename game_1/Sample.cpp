@@ -167,7 +167,7 @@ std::vector<Move> GameState::getWhereToMoves(){
 			}
 			if(xMove == x && yMove == y) continue;
 			int subSheepNumber = this->getSheepNumberToDivide(xMove, yMove, x, y);
-			moves.emplace_back(Move{x, y, subSheepNumber, direction, abs(xMove - x)});
+			moves.emplace_back(Move{x, y, subSheepNumber, direction, std::max(abs(xMove - x), abs(yMove - y))});
 		}
 	}
 	return moves;
