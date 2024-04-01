@@ -22,6 +22,8 @@
 #define exponentDFSArea 1.15
 #define exponentEvaluate 1.25
 #define minimaxDepth 2
+#define FLT_MAX std::numeric_limits<float>::max()
+#define FLT_MIN std::numeric_limits<float>::min()
 
 // 8個方向 
 constexpr int dx[] = {0, -1, 0, 1, -1, 0, 1, -1, 0, 1};
@@ -402,7 +404,7 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID){
     //     return stateA.evaluate() > stateB.evaluate();
     // });
 	if(anyPlayerID == this->myPlayerID){
-        float maxEvaluation = std::numeric_limits<float>::min();
+        float maxEvaluation = FLT_MIN;
 		for(auto& move : availableMoves){
 			GameState newState = this->applyMove(move, *this, anyPlayerID);
 			float evaluation = newState.minimax(depth - 1, alpha, beta, (anyPlayerID % 4) + 1);
@@ -413,7 +415,7 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID){
 		return maxEvaluation;
 	}
 	if(anyPlayerID != this->myPlayerID){
-        float minEvaluation = std::numeric_limits<float>::max();
+        float minEvaluation = FLT_MAX;
 		for(auto& move : availableMoves){
 			GameState newState = this->applyMove(move, *this, anyPlayerID);
 			float evaluation = newState.minimax(depth - 1, alpha, beta, (anyPlayerID % 4) + 1);
@@ -445,13 +447,13 @@ float GameState::evaluate(){
 }
 
 Move GameState::getBestMove(int depth, int playerID){
-	float bestScore = std::numeric_limits<float>::min();
+	float bestScore = FLT_MIN;
 	Move bestMove = Move{-1, -1, -1, -1, -1};
 	std::vector<Move> availableMoves = this->getWhereToMoves(playerID, 1);
 	if(availableMoves.empty()) return bestMove;
 	for(auto& move : availableMoves){
 		GameState newState = this->applyMove(move, *this, playerID);
-        int score = newState.minimax(depth - 1, INT_MIN, INT_MAX, (playerID % 4) + 1);
+        int score = newState.minimax(depth - 1, FLT_MIN, FLT_MAX, (playerID % 4) + 1);
 		if(score > bestScore){
 			bestScore = score;
 			bestMove = move;
