@@ -16,6 +16,9 @@
 #define weightEmptyNum 3
 #define rewardOpponentNear 10
 #define rewardOpponentFar 5
+#define weightDfsArea 0.33
+#define weightOpponentNum 0.33
+#define weightOpponentSheep 0.33
 #define exponentDFSArea 1.15
 #define exponentEvaluate 1.25
 #define minimaxDepth 2
@@ -230,7 +233,7 @@ class GameState{
 
 		// 依據地圖特性為羊群進行分割
 		int getSheepNumberToDivide(int xMove, int yMove, int x, int y, int anyPlayerID);
-		float calculateArea(int x, int y, int anyPlayerID);
+		std::vector<float>  calculateArea(int x, int y, int anyPlayerID);
 		int dfs(int x, int y, std::vector<std::vector<bool>>& visited, int anyPlayerID, int originX, int originY, bool nineNine);
 
 		// 產生新的GameState
@@ -312,22 +315,46 @@ std::vector<Move> GameState::getWhereToMoves(int anyPlayerID, bool everyPosibili
 // 使用 DFS 兩邊的連通面積得分 再根據得分比例決定要分割多少羊群
 int GameState::getSheepNumberToDivide(int xMove, int yMove, int x, int y, int anyPlayerID){
 	int sheepNumber = this->sheepState[x][y];
-	float areaMove = this->calculateArea(xMove, yMove, anyPlayerID);
-	float area = this->calculateArea(x, y, anyPlayerID);
-	int sheepNumberToDivide = std::min(std::max(int(sheepNumber * (areaMove / (areaMove + area))), 1) , sheepNumber - 1);
+
+	std::vector<float> totalAreaMove = this->calculateArea(xMove, yMove, anyPlayerID);
+	std::vector<float> totalArea = this->calculateArea(x, y, anyPlayerID);
+
+	//parameter0
+	float dfsAreaMove = totalAreaMove[0];
+	float dfsArea = totalArea[0];
+	//parameter1
+	float opponentNumMove = totalAreaMove[1];
+	float opponentNum = totalArea[1];
+	//parameter2
+	float opponentSheepMove = totalAreaMove[2];
+	float opponentSheep = totalArea[2];
+
+	int sheepDivideRatio = weightDfsArea * (dfsAreaMove / (dfsAreaMove + dfsArea)) + 
+		weightOpponentNum * (opponentNumMove / (opponentNumMove + opponentNum)) +
+		weightOpponentSheep * (opponentSheepMove / (opponentSheepMove + opponentSheep));
+
+	int sheepNumberToDivide = std::min(std::max(int(sheepNumber * sheepDivideRatio), 1) , sheepNumber - 1);
 	return sheepNumberToDivide;			
 }
 
-// 加總連通面積1.25次方
-float GameState::calculateArea(int x, int y, int anyPlayerID){
+std::vector<float> GameState::calculateArea(int x, int y, int anyPlayerID){
 	std::vector<std::vector<bool>> visited(3, std::vector<bool>(3, false));
-	float totalArea = 0;
+	std::vector<float> totalArea(3, 0);
 	for(int i = 1 ; i <= 9 ; ++i){
 		float area = 0;
 		int xMove = x + dx[i];
 		int yMove = y + dy[i];
+		//(0)加總連通面積1.25次方 DFS
 		if(isPositionValidForOccupying(xMove, yMove, this->mapState)) area = pow(this->dfs(xMove, yMove, visited, anyPlayerID, xMove, yMove, 1), exponentDFSArea);
-		totalArea += area;
+		totalArea[0] += area;
+
+		if(this->mapState[xMove][yMove] != anyPlayerID && this->mapState[xMove][yMove] > 0) {
+			// 這裡的 1/7 是因為 8個方向中有一個是自己
+			//(1)對手數量
+			totalArea[1] += (1/7.0);
+			//(2)對手sheep數量
+			totalArea[2] += this->sheepState[xMove][yMove] / (16.0 * 7);
+		}
 	}
 	return totalArea;
 }
