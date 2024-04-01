@@ -16,9 +16,9 @@
 #define weightEmptyNum 3
 #define rewardOpponentNear 10
 #define rewardOpponentFar 5
-#define weightDfsArea 0.33
-#define weightOpponentNum 0.33
-#define weightOpponentSheep 0.33
+#define weightDfsArea 0.45
+#define weightOpponentNum 0.28
+#define weightOpponentSheep 0.27
 #define exponentDFSArea 1.15
 #define exponentEvaluate 1.25
 #define minimaxDepth 6
@@ -136,7 +136,7 @@ int scoreOpponentDistance(int x, int y, int mapStat[MAXGRID][MAXGRID], int playe
             if (mapStat[ix][iy] != playerID && mapStat[ix][iy] > 0) {
 				haveOpponent = true;
                 int distance = std::max(abs(ix - x), abs(iy - y));
-				fprintf(outfile, "opponent: (%d, %d), distance = %d\n", ix, iy, distance);
+				// fprintf(outfile, "opponent: (%d, %d), distance = %d\n", ix, iy, distance);
                 opponentDistance = std::min(opponentDistance, distance);
             }
         }
@@ -176,14 +176,14 @@ std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID]) {
 			//目標周圍空格多、周圍延伸距離短
             float score = weightEmptyNum * scoreEmptyNum - weightSurroundLen * scoreSurroundNum / 8;
 
-			fprintf(outfile, "(%d, %d), score = (%d*%d - %d*%f/8)", x, y, weightEmptyNum, scoreEmptyNum, weightSurroundLen, scoreSurroundNum);
+			// fprintf(outfile, "(%d, %d), score = (%d*%d - %d*%f/8)", x, y, weightEmptyNum, scoreEmptyNum, weightSurroundLen, scoreSurroundNum);
             // 根據與對手的距離調整分數
 			if (opponentDistance <= 2 && opponentDistance >= 0) {
                 score -= rewardOpponentNear;  // 離對手太近,減少分數
-				fprintf(outfile, " - %d = %f, distance = %d\n", rewardOpponentNear, score, opponentDistance);
+				// fprintf(outfile, " - %d = %f, distance = %d\n", rewardOpponentNear, score, opponentDistance);
             } else if (opponentDistance >= 6) {
                 score += rewardOpponentFar;   // 離對手較遠,增加分數
-				fprintf(outfile, " - %d = %f, distance = %d\n", rewardOpponentFar, score, opponentDistance);
+				// fprintf(outfile, " - %d = %f, distance = %d\n", rewardOpponentFar, score, opponentDistance);
             }
 
             if (score > maxScore) {
@@ -294,7 +294,8 @@ int GameState::getSheepNumberToDivide(int xMove, int yMove, int x, int y, int an
 
 	std::vector<float> totalAreaMove = this->calculateArea(xMove, yMove, anyPlayerID);
 	std::vector<float> totalArea = this->calculateArea(x, y, anyPlayerID);
-
+	
+	int n = 3;
 	//parameter0
 	float dfsAreaMove = totalAreaMove[0];
 	float dfsArea = totalArea[0];
@@ -305,9 +306,11 @@ int GameState::getSheepNumberToDivide(int xMove, int yMove, int x, int y, int an
 	float opponentSheepMove = totalAreaMove[2];
 	float opponentSheep = totalArea[2];
 
-	int sheepDivideRatio = weightDfsArea * (dfsAreaMove / (dfsAreaMove + dfsArea)) + 
+	float sheepDivideRatio = weightDfsArea * (dfsAreaMove / (dfsAreaMove + dfsArea)) + 
 		weightOpponentNum * (opponentNumMove / (opponentNumMove + opponentNum)) +
 		weightOpponentSheep * (opponentSheepMove / (opponentSheepMove + opponentSheep));
+	// fprintf(outfile, "dfsAreaMove, dfsArea, opponentNumMove, opponentNum, opponentSheepMove, opponentSheep, sheepDivideRatio\n");
+	// fprintf(outfile, "%f, %f, %f, %f, %f, %f, %f\n", dfsAreaMove, dfsArea, opponentNumMove, opponentNum, opponentSheepMove, opponentSheep, sheepDivideRatio);
 
 	int sheepNumberToDivide = std::min(std::max(int(sheepNumber * sheepDivideRatio), 1) , sheepNumber - 1);
 	return sheepNumberToDivide;			
@@ -330,6 +333,11 @@ std::vector<float> GameState::calculateArea(int x, int y, int anyPlayerID){
 			totalArea[1] += (1/7.0);
 			//(2)對手sheep數量
 			totalArea[2] += this->sheepState[xMove][yMove] / (16.0 * 7);
+		}else if(this->mapState[xMove][yMove] == -1){
+			//(1)障礙數量
+			totalArea[1] += 1/7.0;
+			//(2)障礙sheep數量(算為1)
+			totalArea[2] += 1 / (16.0 * 7);
 		}
 	}
 	return totalArea;
