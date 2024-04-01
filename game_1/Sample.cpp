@@ -21,9 +21,10 @@
 #define weightOpponentSheep 0.33
 #define exponentDFSArea 1.15
 #define exponentEvaluate 1.25
-#define minimaxDepth 3
+#define minimaxDepth 6
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
+#define isEveryPosibility false
 
 // 8個方向 
 constexpr int dx[] = {0, -1, 0, 1, -1, 0, 1, -1, 0, 1};
@@ -367,15 +368,16 @@ GameState GameState::applyMove(Move move, GameState state, int anyPlayerID){
 // 如果換對手走，就是最小值
 // 下一個玩家是誰(anyPlayerID % 4 + 1)
 float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID){
-	std::vector<Move> availableMoves = this->getWhereToMoves(anyPlayerID, 0);
+	std::vector<Move> availableMoves = this->getWhereToMoves(anyPlayerID, isEveryPosibility);
 
 	if(depth == 0 or availableMoves.empty()) return this->evaluate();
 
-    // std::sort(availableMoves.begin(), availableMoves.end(), [this](const Move& a, const Move& b) {
-    //     GameState stateA = this->applyMove(a, *this);
-    //     GameState stateB = this->applyMove(b, *this);
-    //     return stateA.evaluate() > stateB.evaluate();
-    // });
+    std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
+        GameState stateA = this->applyMove(a, *this, anyPlayerID);
+        GameState stateB = this->applyMove(b, *this, anyPlayerID);
+        return stateA.evaluate() > stateB.evaluate();
+    });
+
 	if(anyPlayerID == this->myPlayerID){
         float maxEvaluation = FLT_MIN;
 		for(auto& move : availableMoves){
@@ -422,7 +424,7 @@ float GameState::evaluate(){
 Move GameState::getBestMove(int depth, int playerID){
 	float bestScore = FLT_MIN;
 	Move bestMove = Move{-1, -1, -1, -1, -1};
-	std::vector<Move> availableMoves = this->getWhereToMoves(playerID, 1);
+	std::vector<Move> availableMoves = this->getWhereToMoves(playerID, isEveryPosibility);
 	if(availableMoves.empty()) return bestMove;
 	for(auto& move : availableMoves){
 		GameState newState = this->applyMove(move, *this, playerID);
@@ -432,7 +434,7 @@ Move GameState::getBestMove(int depth, int playerID){
 			bestMove = move;
 		}
 	}
-	printMapAndSheep(this->mapState, this->sheepState);
+	// printMapAndSheep(this->mapState, this->sheepState);
 	fprintf(outfile, "\nBestmove: (x, y) = (%d, %d), (xMove, yMove, direction) = (%d, %d, %d), sheepNum = %d, bestscore = %f\n", bestMove.x, bestMove.y, bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement, bestMove.direction, bestMove.subSheepNumber, bestScore);
 	return bestMove;
 }
