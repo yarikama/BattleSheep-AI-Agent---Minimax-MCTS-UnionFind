@@ -21,7 +21,7 @@
 #define weightOpponentSheep 0.33
 #define exponentDFSArea 1.15
 #define exponentEvaluate 1.25
-#define minimaxDepth 2
+#define minimaxDepth 3
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
 
@@ -213,7 +213,7 @@ class GameState{
 			this->sheepBlocks.resize(5, std::vector<sheepBlock>());
 			for(int y = 0 ; y < MAXGRID ; ++y){
 				for(int x = 0 ; x < MAXGRID ; ++x){
-					if(this->sheepState[x][y] > 0)  this->sheepBlocks[this->sheepState[x][y]].emplace_back(std::make_pair(x, y));
+					if(mapState[x][y] > 0) this->sheepBlocks[mapState[x][y]].emplace_back(std::make_pair(x, y));
 				}
 			}
 		}
@@ -259,33 +259,6 @@ class GameState{
 	3. 分隔羊群
 	4. 儲存分隔後的羊群可以走的地方 
 */
-
-// std::vector<Move> GameState::getWhereToMoves(){
-// 	std::vector<Move> moves;
-// 	for(auto& sheepBlock : this->mySheepBlocks){
-// 		// 找出我有羊群的位置
-// 		int x = sheepBlock.first, y = sheepBlock.second;
-// 		int sheepNumber = this->sheepState[x][y];
-// 		if(sheepNumber <= 1) continue;
-
-// 		// 找出所有羊群各自可以走到底的地方（不能是自己）
-// 		for(int direction = 1; direction <= 9; ++direction){
-// 			if(direction == 5) continue;
-// 			int xMove = x;
-// 			int yMove = y;
-// 			while(isPositionValidForOccupying(xMove + dx[direction], yMove + dy[direction], this->mapState)) {
-// 				xMove += dx[direction]; 
-// 				yMove += dy[direction];
-// 			}
-// 			if(xMove == x && yMove == y) continue;
-// 			int subSheepNumber = this->getSheepNumberToDivide(xMove, yMove, x, y);
-// 			moves.emplace_back(Move{x, y, subSheepNumber, direction, std::max(abs(xMove - x), abs(yMove - y))});
-// 		}
-// 	}
-// 	return moves;
-// }
-
-
 // 找出anyPlayer的羊群可以走的地方 (該位置有羊群，之後走到底)
 std::vector<Move> GameState::getWhereToMoves(int anyPlayerID, bool everyPosibility){
 	std::vector<Move> moves;
