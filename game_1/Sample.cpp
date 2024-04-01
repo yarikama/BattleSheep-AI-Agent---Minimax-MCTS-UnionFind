@@ -21,7 +21,7 @@
 #define weightOpponentSheep 0.27
 #define exponentDFSArea 1.15
 #define exponentEvaluate 1.25
-#define minimaxDepth 6
+#define minimaxDepth 3
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
 #define isEveryPosibility false
@@ -295,7 +295,6 @@ int GameState::getSheepNumberToDivide(int xMove, int yMove, int x, int y, int an
 	std::vector<float> totalAreaMove = this->calculateArea(xMove, yMove, anyPlayerID);
 	std::vector<float> totalArea = this->calculateArea(x, y, anyPlayerID);
 	
-	int n = 3;
 	//parameter0
 	float dfsAreaMove = totalAreaMove[0];
 	float dfsArea = totalArea[0];
