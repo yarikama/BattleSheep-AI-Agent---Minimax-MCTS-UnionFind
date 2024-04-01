@@ -15,7 +15,7 @@
 #define weightSurroundLen 1
 #define weightEmptyNum 3
 #define rewardOpponentNear 10
-#define rewardOpponentFar 10
+#define rewardOpponentFar 5
 #define exponentDFSArea 1.15
 #define exponentEvaluate 1.25
 #define minimaxDepth 2
@@ -124,21 +124,25 @@ void scorePosition(int x, int y, int mapStat[MAXGRID][MAXGRID], int& scoreEmptyN
 
 int scoreOpponentDistance(int x, int y, int mapStat[MAXGRID][MAXGRID], int playerID) {
     int opponentDistance = INT_MAX;
-    for (int i = 0; i < MAXGRID; i++) {
-        for (int j = 0; j < MAXGRID; j++) {
-            if (mapStat[i][j] != playerID && mapStat[i][j] > 0) {
-                int distance = abs(i - x) + abs(j - y);
+	bool haveOpponent = false;
+    for (int iy = 0; iy < MAXGRID; iy++) {
+        for (int ix = 0; ix < MAXGRID; ix++) {
+            if (mapStat[ix][iy] != playerID && mapStat[ix][iy] > 0) {
+				haveOpponent = true;
+                int distance = std::max(abs(ix - x), abs(iy - y));
+				fprintf(outfile, "opponent: (%d, %d), distance = %d\n", ix, iy, distance);
                 opponentDistance = std::min(opponentDistance, distance);
             }
         }
     }
+	if(!haveOpponent) return -1;
     return opponentDistance;
 }
 
 std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID]) {
     std::vector<int> init_pos;
     init_pos.resize(2);
-    int maxScore = 0;
+    float maxScore = 0;
 
     for (int y = 0; y < MAXGRID; y++) {
         for (int x = 0; x < MAXGRID; x++) {
@@ -164,13 +168,16 @@ std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID]) {
             if (isEdge == false) continue;
 
 			//目標周圍空格多、周圍延伸距離短
-            int score = weightEmptyNum * scoreEmptyNum - weightSurroundLen * scoreSurroundNum / 8;
+            float score = weightEmptyNum * scoreEmptyNum - weightSurroundLen * scoreSurroundNum / 8;
 
+			fprintf(outfile, "(%d, %d), score = (%d*%d - %d*%f/8)", x, y, weightEmptyNum, scoreEmptyNum, weightSurroundLen, scoreSurroundNum);
             // 根據與對手的距離調整分數
-            if (opponentDistance <= 2) {
+			if (opponentDistance <= 2 && opponentDistance >= 0) {
                 score -= rewardOpponentNear;  // 離對手太近,減少分數
+				fprintf(outfile, " - %d = %f, distance = %d\n", rewardOpponentNear, score, opponentDistance);
             } else if (opponentDistance >= 6) {
                 score += rewardOpponentFar;   // 離對手較遠,增加分數
+				fprintf(outfile, " - %d = %f, distance = %d\n", rewardOpponentFar, score, opponentDistance);
             }
 
             if (score > maxScore) {
