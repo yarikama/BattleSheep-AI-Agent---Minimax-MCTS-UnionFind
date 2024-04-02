@@ -21,6 +21,7 @@
 #define weightOpponentSheep 0.27
 #define exponentDFSArea 1.15
 #define exponentEvaluate 1.25
+#define MCTS_SIMULATIONS 10
 #define minimaxDepth 3
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
@@ -48,6 +49,15 @@ struct Move{
 
 typedef struct Move Move;
 typedef std::pair<int, int> sheepBlock; 
+
+struct MCTSNode {
+    int visits;
+    float value;
+    std::vector<Move> untriedMoves;
+    std::vector<MCTSNode*> children;
+    
+    MCTSNode(std::vector<Move> moves) : visits(0), value(0), untriedMoves(moves) {}
+};
 
 void printMap(int mapStat[MAXGRID][MAXGRID]){
     fprintf(outfile, "   ");
@@ -145,6 +155,14 @@ int scoreOpponentDistance(int x, int y, int mapStat[MAXGRID][MAXGRID], int playe
     return opponentDistance;
 }
 
+/*
+    選擇起始位置
+    選擇範圍僅限場地邊緣(至少一個方向為牆)
+    
+    return: init_pos
+    init_pos=<x,y>,代表你要選擇的起始位置
+    
+*/
 std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID]) {
     std::vector<int> init_pos;
     init_pos.resize(2);
@@ -244,6 +262,12 @@ class GameState{
 
 		// minimax
 		float minimax(int depth, float alpha, float beta, int playerID);
+
+		// MCTS
+		float mcts(MCTSNode* node, int playerID);
+		float simulate(int playerID);
+		bool isTerminal(std::vector<bool> isNoMove);
+
 		
 		// evaluate
 		float evaluate();
@@ -377,7 +401,16 @@ GameState GameState::applyMove(Move move, GameState state, int anyPlayerID){
 float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID){
 	std::vector<Move> availableMoves = this->getWhereToMoves(anyPlayerID, isEveryPosibility);
 
-	if(depth == 0 or availableMoves.empty()) return this->evaluate();
+	// if(depth == 0 or availableMoves.empty()) return this->evaluate();
+	// if(availableMoves.empty()) return this->evaluate();
+	if(depth == 0){
+		MCTSNode root(availableMoves);
+        for (int i = 0; i < MCTS_SIMULATIONS; ++i) {
+            this->mcts(&root, anyPlayerID);
+        }
+		fprintf(outfile, "root.value, root.visits = (%f, %d)\n", root.value, root.visits);
+        return root.value / root.visits;
+	}
 
     std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
         GameState stateA = this->applyMove(a, *this, anyPlayerID);
@@ -445,14 +478,68 @@ Move GameState::getBestMove(int depth, int playerID){
 	fprintf(outfile, "\nBestmove: (x, y) = (%d, %d), (xMove, yMove, direction) = (%d, %d, %d), sheepNum = %d, bestscore = %f\n", bestMove.x, bestMove.y, bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement, bestMove.direction, bestMove.subSheepNumber, bestScore);
 	return bestMove;
 }
-/*
-    選擇起始位置
-    選擇範圍僅限場地邊緣(至少一個方向為牆)
-    
-    return: init_pos
-    init_pos=<x,y>,代表你要選擇的起始位置
-    
-*/
+
+float GameState::mcts(MCTSNode* node, int playerID) {
+    if (node->untriedMoves.empty() && node->children.empty()) {
+        return node->value;
+    }
+    if (!node->untriedMoves.empty()) {
+        int idx = rand() % node->untriedMoves.size();
+        Move move = node->untriedMoves[idx];
+        node->untriedMoves.erase(node->untriedMoves.begin() + idx);
+        
+        GameState newState = this->applyMove(move, *this, playerID);
+        MCTSNode* newNode = new MCTSNode(newState.getWhereToMoves((playerID % 4) + 1, isEveryPosibility));
+        node->children.push_back(newNode);
+        
+        float value = newState.simulate((playerID % 4) + 1);
+        newNode->value = value;
+        newNode->visits = 1;
+
+		node->visits++;
+		node->value += value;
+        
+        return value;
+    }
+    else {
+        float bestValue = FLT_MIN;
+        MCTSNode* bestChild = nullptr;
+        
+        for (MCTSNode* child : node->children) {
+            float ucb = child->value / child->visits + sqrt(2 * log(node->visits) / child->visits);
+			if (ucb > bestValue) {
+                bestValue = ucb;
+                bestChild = child;
+            }
+        }
+        float value = this->mcts(bestChild, (playerID % 4) + 1);
+        node->visits++;
+        node->value += value;
+        
+        return value;
+    }
+}
+
+float GameState::simulate(int playerID) {
+    GameState state = *this;
+	std::vector<bool> isNoMove(4, false);
+    while (!state.isTerminal(isNoMove)) {
+        std::vector<Move> availableMoves = state.getWhereToMoves(playerID, isEveryPosibility);
+        if (!availableMoves.empty()) {
+            int idx = rand() % availableMoves.size();
+            state = state.applyMove(availableMoves[idx], state, playerID);
+        }else{
+			isNoMove[playerID - 1] = true;
+		}
+        playerID = (playerID % 4) + 1;
+    }
+    return state.evaluate();
+}
+
+bool GameState::isTerminal(std::vector<bool> isNoMove) {
+	for(int i = 0 ; i < 4 ; i++) if(!isNoMove[i]) return false;
+    return true;
+}
 
 
 /*
