@@ -24,9 +24,7 @@
 #define exponentDFSArea 1.5
 #define exponentEvaluate 1.25
 #define MCTS_SIMULATIONS 10
-#define minimaxDepth 5
-#define bfsEvaluate 0
-#define bfsSheepNumber 1
+#define minimaxDepth 2
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
 #define isEveryPosibility false
@@ -328,7 +326,7 @@ class GameState{
 		// MCTS
 		float mcts(MCTSNode* node, int playerID);
 		float simulate(int playerID);
-		bool isTerminal(std::vector<bool> isNoMove);
+		inline bool isTerminal(std::vector<bool> isNoMove);
 
 		
 		// evaluate
@@ -406,8 +404,8 @@ int GameState::getSheepNumberToDivide(int xMove, int yMove, int x, int y, int an
 
 std::vector<float> GameState::calculateArea(int x, int y, int anyPlayerID){
 	std::vector<std::vector<bool>> visited(MAXGRID, std::vector<bool>(MAXGRID, true));
-	for(int i = x - 1 ; i <= x + 1 ; ++i){
-		for(int j = y - 1 ; j <= y + 1 ; ++j){
+	for(int i = x - 2 ; i <= x + 2 ; ++i){
+		for(int j = y - 2 ; j <= y + 2 ; ++j){
 			if(isPositionValid(i, j)) visited[i][j] = false;
 		}
 	}
@@ -496,21 +494,21 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID){
 	std::vector<Move> availableMoves = this->getWhereToMoves(anyPlayerID, isEveryPosibility);
 
 	// if(depth == 0 or availableMoves.empty()) return this->evaluate();
-	// if(availableMoves.empty()) return this->evaluate();
+	if(availableMoves.empty()) return this->evaluate();
 	if(depth == 0){
 		MCTSNode root(availableMoves);
         for (int i = 0; i < MCTS_SIMULATIONS; ++i) {
             this->mcts(&root, anyPlayerID);
         }
-		fprintf(outfile, "root.value, root.visits = (%f, %d)\n", root.value, root.visits);
+		// fprintf(outfile, "root.value, root.visits = (%f, %d)\n", root.value, root.visits);
         return root.value / root.visits;
 	}
 
-    std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
-        GameState stateA = this->applyMove(a, *this, anyPlayerID);
-        GameState stateB = this->applyMove(b, *this, anyPlayerID);
-		return stateA.evaluate() > stateB.evaluate();
-    });
+    // std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
+    //     GameState stateA = this->applyMove(a, *this, anyPlayerID);
+    //     GameState stateB = this->applyMove(b, *this, anyPlayerID);
+	// 	return stateA.evaluate() > stateB.evaluate();
+    // });
 
 	if(anyPlayerID == this->myPlayerID){
         float maxEvaluation = FLT_MIN;
@@ -563,6 +561,9 @@ float GameState::evaluateByUnionFind(){
 }
 
 Move GameState::getBestMove(int depth, int playerID){
+	clock_t start, end;
+	start = clock();
+
 	float bestScore = FLT_MIN;
 	Move bestMove = Move{-1, -1, -1, -1, -1};
 	std::vector<Move> availableMoves = this->getWhereToMoves(playerID, isEveryPosibility);
@@ -575,8 +576,11 @@ Move GameState::getBestMove(int depth, int playerID){
 			bestMove = move;
 		}
 	}
-	printMapAndSheep(this->mapState, this->sheepState);
-	fprintf(outfile, "\nBestmove: (x, y) = (%d, %d), (xMove, yMove, direction) = (%d, %d, %d), sheepNum = %d, bestscore = %f\n", bestMove.x, bestMove.y, bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement, bestMove.direction, bestMove.subSheepNumber, bestScore);
+	// printMapAndSheep(this->mapState, this->sheepState);
+
+	end = clock();
+	float time = (float)(end - start) / CLOCKS_PER_SEC;
+	// fprintf(outfile, "\nBestmove: (x, y) = (%d, %d), (xMove, yMove, direction) = (%d, %d, %d), sheepNum = %d, bestscore = %f, time = %f\n", bestMove.x, bestMove.y, bestMove.x + dx[bestMove.direction] * bestMove.displacement, bestMove.y + dy[bestMove.direction] * bestMove.displacement, bestMove.direction, bestMove.subSheepNumber, bestScore, time);
 	return bestMove;
 }
 
@@ -637,7 +641,7 @@ float GameState::simulate(int playerID) {
     return state.evaluate();
 }
 
-bool GameState::isTerminal(std::vector<bool> isNoMove) {
+inline bool GameState::isTerminal(std::vector<bool> isNoMove) {
 	for(int i = 0 ; i < 4 ; i++) if(!isNoMove[i]) return false;
     return true;
 }
@@ -677,8 +681,8 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
 
 int main()
 {
-	std::string filename = "output.txt";
-	outfile = fopen(filename.c_str(), "w");
+	// std::string filename = "output.txt";
+	// outfile = fopen(filename.c_str(), "w");
 
 	int id_package;
 	int playerID;
@@ -695,5 +699,6 @@ int main()
 		std::vector<int> step = {bestMove[0], bestMove[1], bestMove[2], bestMove[3]};
 		SendStep(id_package, step);
 	}
-	fclose(outfile);
+
+	// fclose(outfile);
 }
