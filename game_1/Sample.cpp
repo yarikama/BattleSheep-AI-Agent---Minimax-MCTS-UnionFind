@@ -8,15 +8,17 @@
 #include <math.h>
 #include <algorithm>
 #include <limits.h>
+#include <memory>
+#include <chrono>
 #include <limits>
 #include <queue>
 #include <functional>
 #include <set>
-
+#include <future>
 #define MAXGRID 12
 #define powSurroundLen 1.5
 #define weightSurroundLen 1
-#define weightEmptyNum 3
+#define weightEmptyNum 2
 #define rewardOpponentNear 10
 #define rewardOpponentFar 5
 #define weightDfsArea 0.45
@@ -25,7 +27,8 @@
 #define exponentDFSArea 1.5
 #define exponentEvaluate 1.25
 #define MCTS_SIMULATIONS 10
-#define minimaxDepth 5
+#define MCTS_DEPTH 4
+#define minimaxDepth 6
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
 #define isEveryPosibility false
@@ -179,15 +182,6 @@ class UnionFind{
 };
 
 
-struct MCTSNode {
-    int visits;
-    float value;
-    std::vector<Move> untriedMoves;
-    std::vector<MCTSNode*> children;
-    
-    MCTSNode(std::vector<Move> moves) : visits(0), value(0), untriedMoves(moves) {}
-};
-
 void printMap(int mapStat[MAXGRID][MAXGRID]){
     fprintf(outfile, "   ");
     for(int x = 0; x < MAXGRID; x++) fprintf(outfile, "%d  ", x);
@@ -322,13 +316,20 @@ void scorePosition(int x, int y, int mapStat[MAXGRID][MAXGRID], int& scoreEmptyN
     scoreEmptyNum = 0;
     scoreSurroundNum = 0;
 
+	for(int i = -2 ; i <= 2 ; ++i){
+		for(int j = -2 ; j <= 2 ; ++j){
+			if(i == 0 and j == 0) continue;
+			if(isPositionValidForOccupying(x + i, y + j, mapStat)) scoreEmptyNum++;
+			if(isPositionValid(x + i, y + j) and mapStat[x+i][y+j] > 0) scoreEmptyNum -= 2;
+		}
+	}
     for (int i = 1; i <= 9; i++) {
         if (i == 5) continue;
         int newX = x + dx[i], newY = y + dy[i];
 
         if (!isPositionValidForOccupying(newX, newY, mapStat)) continue;
         // 計算周圍空格數
-		scoreEmptyNum++;
+		// scoreEmptyNum++;
         // 計算周圍延伸距離
         int lenSurround = 0;
         while (isPositionValidForOccupying(newX, newY, mapStat)) {
@@ -416,10 +417,11 @@ std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID]) {
     return init_pos;
 }
 
-
+struct MCTSNode;
 // 版面資訊：棋盤狀態、羊群分布狀態、玩家ID、我的羊群位置（Stack）
 class GameState{
 	friend class UnionFind;
+	friend class MCTSNode;
 	private:
 		int myPlayerID;
 		int (*mapState)[MAXGRID];
@@ -428,6 +430,7 @@ class GameState{
 		UnionFind unionFind;
 		std::vector<std::vector<sheepBlock>> sheepBlocks;
 	public:
+		GameState(){};
 		// 從 GetStep 取得的 GameState（server 回傳）不需要進行複製
 		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], UnionFind& lastUnionFind, std::vector<std::vector<sheepBlock>>& lastSheepBlocks){
 			this->myPlayerID = playerID;
@@ -438,7 +441,7 @@ class GameState{
 			this->isCopy = false;
 		}
 
-		// 從 applyMove 取得的 GameState，需要進行複製
+		// 從 applyMove 或是 MCTS 取得的 GameState，需要進行複製
 		GameState(const GameState& lastGameState){
 			this->isCopy = true;
 			this->myPlayerID = lastGameState.myPlayerID;
@@ -534,8 +537,8 @@ class GameState{
 		float minimax(int depth, float alpha, float beta, int playerID, Move* bestMove = nullptr);
 
 		// MCTS
-		float mcts(MCTSNode* node, int playerID);
-		float simulate(int playerID);
+		float mcts(MCTSNode* node, int playerID, int depth, int maxDepth);
+		float simulate(int playerID, int simulateDepth);
 		inline bool isTerminal(std::vector<bool> isNoMove);
 
 		// UnionFind
@@ -547,7 +550,28 @@ class GameState{
 		// Move getBestMove(int depth, int playerID);
 };
 
-
+struct MCTSNode {
+    int visits;
+    float value;
+	int roundPlayerID;
+	GameState state;
+    std::vector<Move> untriedMoves;
+    std::vector<MCTSNode*> children;
+    
+    // MCTSNode(std::vector<Move> moves) : visits(0), value(0), untriedMoves(moves) {}
+	MCTSNode(const GameState &state, int roundPlayerID){
+		this->roundPlayerID = roundPlayerID;
+		this->state = GameState(state);
+		this->untriedMoves = this->state.getWhereToMoves(roundPlayerID, isEveryPosibility);
+		this->visits = 0;
+		this->value = 0;
+	}
+	// ~MCTSNode() {
+	// 	for (auto child : children) {
+	// 		delete child;
+	// 	}
+	// }
+};
 
 /* 找可以走的地方 
 	1. 找出我有羊群的位置（>1）
@@ -718,48 +742,88 @@ GameState GameState::applyMove(Move move, const GameState& lastState, int anyPla
 float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Move* bestMove){
 	// 找所有可以動的地方
 	std::vector<Move> availableMoves = this->getWhereToMoves(anyPlayerID, isEveryPosibility);
-
 	// 終止條件
-	if(availableMoves.empty() or depth == 0) return this->evaluateByUnionFind();
+	if(availableMoves.empty()) return this->evaluateByUnionFind();
 	if(depth == 0){
-		MCTSNode root(availableMoves);
+		MCTSNode root(*this, anyPlayerID);
         for (int i = 0; i < MCTS_SIMULATIONS; ++i) {
-            this->mcts(&root, anyPlayerID);
+            this->mcts(&root, anyPlayerID, 0, MCTS_DEPTH);
         }
-		// fprintf(outfile, "root.value, root.visits = (%f, %d)\n", root.value, root.visits);
+		float averageScore = root.value / root.visits;
 		printf("root.value, root.visits = (%f, %d)\n", root.value, root.visits);
-        return root.value / root.visits;
+		printf("averageScore = %f\n", averageScore);
+        return averageScore;
+		// return 0;
 	}
 
 	// 加快 minimax 速度，先評估好的走法排在前面
-    // std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
-    //     GameState stateA = this->applyMove(a, *this, anyPlayerID);
-    //     GameState stateB = this->applyMove(b, *this, anyPlayerID);
-	// 	return stateA.evaluateByUnionFind() > stateB.evaluateByUnionFind();
-    // });
+
+
+
+    std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
+        GameState stateA = this->applyMove(a, *this, anyPlayerID);
+        GameState stateB = this->applyMove(b, *this, anyPlayerID);
+		return stateA.evaluateByUnionFind() > stateB.evaluateByUnionFind();
+    });
 
 	if(anyPlayerID == this->myPlayerID){
         float maxEvaluation = FLT_MIN;
 		for(auto& move : availableMoves){
 			GameState newState = this->applyMove(move, *this, anyPlayerID);
 			float evaluation = newState.minimax(depth - 1, alpha, beta, (anyPlayerID % 4) + 1);
+			// printf("last evaluation = %f\n", evaluation);
 			// 第一層的時候，要找出最好的走法
 			if(depth == minimaxDepth and evaluation >= maxEvaluation) *bestMove = move;
 			maxEvaluation = std::max(maxEvaluation, evaluation);
 			alpha = std::max(alpha, maxEvaluation);
 			if(beta <= alpha) break;
 		}
+        // std::vector<std::future<float>> futures;
+		// for(auto& move : availableMoves){
+		// 	futures.emplace_back(std::async(std::launch::async, [this, move, depth, alpha, beta, anyPlayerID](){
+		// 		GameState newState = this->applyMove(move, *this, anyPlayerID);
+		// 		return newState.minimax(depth - 1, alpha, beta, (anyPlayerID % 4) + 1);
+		// 	}));
+		// }
+
+		// for(size_t i = 0 ; i < futures.size() ; ++i){
+		// 	float evaluation = futures[i].get();
+		// 	if(depth == minimaxDepth and evaluation >= maxEvaluation) *bestMove = availableMoves[i];
+		// 	maxEvaluation = std::max(maxEvaluation, evaluation);
+		// 	alpha = std::max(alpha, maxEvaluation);
+		// 	if(beta <= alpha) break;
+		// }
+
 		return maxEvaluation;
 	}
+
 	if(anyPlayerID != this->myPlayerID){
         float minEvaluation = FLT_MAX;
+
 		for(auto& move : availableMoves){
 			GameState newState = this->applyMove(move, *this, anyPlayerID);
 			float evaluation = newState.minimax(depth - 1, alpha, beta, (anyPlayerID % 4) + 1);
+			// printf("last evaluation = %f\n", evaluation);
 			minEvaluation = std::min(minEvaluation, evaluation);
 			beta = std::min(beta, minEvaluation);
 			if(beta <= alpha) break;
 		}
+
+        // std::vector<std::future<float>> futures;
+		// for(auto& move : availableMoves){
+		// 	futures.emplace_back(std::async(std::launch::async, [this, move, depth, alpha, beta, anyPlayerID](){
+		// 		GameState newState = this->applyMove(move, *this, anyPlayerID);
+		// 		return newState.minimax(depth - 1, alpha, beta, (anyPlayerID % 4) + 1);
+		// 	}));
+		// }
+
+		// for(size_t i = 0 ; i < futures.size() ; ++i){
+		// 	float evaluation = futures[i].get();
+		// 	minEvaluation = std::min(minEvaluation, evaluation);
+		// 	beta = std::min(beta, minEvaluation);
+		// 	if(beta <= alpha) break;
+		// }
+
 		return minEvaluation;
 	}
 }
@@ -814,20 +878,25 @@ float GameState::evaluateByUnionFind(){
 // 	return bestMove;
 // }
 
-float GameState::mcts(MCTSNode* node, int playerID) {
+float GameState::mcts(MCTSNode* node, int playerID, int depth, int maxDepth){
+	printf("depth = %d\n", depth);
     if (node->untriedMoves.empty() && node->children.empty()) {
-        return node->value;
+		return node->state.evaluateByUnionFind();
     }
+	if (depth >= maxDepth){
+		return node->state.evaluateByUnionFind();
+	}
     if (!node->untriedMoves.empty()) {
         int idx = rand() % node->untriedMoves.size();
         Move move = node->untriedMoves[idx];
         node->untriedMoves.erase(node->untriedMoves.begin() + idx);
+
+        MCTSNode* newNode = new MCTSNode(this->applyMove(move, *this, playerID), (playerID % 4) + 1);
         
-        GameState newState = this->applyMove(move, *this, playerID);
-        MCTSNode* newNode = new MCTSNode(newState.getWhereToMoves((playerID % 4) + 1, isEveryPosibility));
-        node->children.push_back(newNode);
-        
-        float value = newState.simulate((playerID % 4) + 1);
+		node->children.emplace_back(newNode);
+		printf("I am here 1\n");        
+        float value = newNode->state.simulate((playerID % 4) + 1, maxDepth - depth - 1);
+		printf("value = %f\n", value);
         newNode->value = value;
         newNode->visits = 1;
 
@@ -837,6 +906,7 @@ float GameState::mcts(MCTSNode* node, int playerID) {
         return value;
     }
     else {
+		printf("I am here 4\n");
         float bestValue = FLT_MIN;
         MCTSNode* bestChild = nullptr;
         
@@ -847,32 +917,36 @@ float GameState::mcts(MCTSNode* node, int playerID) {
                 bestChild = child;
             }
         }
-        float value = this->mcts(bestChild, (playerID % 4) + 1);
+        float value = this->mcts(bestChild, (playerID % 4) + 1, depth + 1, maxDepth);
         node->visits++;
         node->value += value;
-        
         return value;
     }
 }
 
-float GameState::simulate(int playerID) {
+
+// 隨機採取動作，直到結束
+float GameState::simulate(int playerID, int simulateDepth) {
     GameState state = *this;
-	std::vector<bool> isNoMove(4, false);
+	std::vector<bool> isNoMove(5, false);
+
     while (!state.isTerminal(isNoMove)) {
         std::vector<Move> availableMoves = state.getWhereToMoves(playerID, isEveryPosibility);
         if (!availableMoves.empty()) {
             int idx = rand() % availableMoves.size();
             state = state.applyMove(availableMoves[idx], state, playerID);
         }else{
-			isNoMove[playerID - 1] = true;
+			isNoMove[playerID] = true;
 		}
         playerID = (playerID % 4) + 1;
+		for(int i = 1 ; i <= 4 ; i++) std::cout << "isNoMove[" << i << "] = " << isNoMove[i] << " ";
+		std::cout << std::endl;
     }
     return state.evaluateByUnionFind();
 }
 
 inline bool GameState::isTerminal(std::vector<bool> isNoMove) {
-	for(int i = 0 ; i < 4 ; i++) if(!isNoMove[i]) return false;
+	for(int i = 1 ; i <= 4 ; i++) if(!isNoMove[i]) return false;
     return true;
 }
 
@@ -911,7 +985,8 @@ int main()
 {
 	// std::string filename = "output.txt";
 	// outfile = fopen(filename.c_str(), "w");
-
+	auto start = std::chrono::high_resolution_clock::now();
+	// ****************************************************
 	int id_package;
 	int playerID;
 	int (*mapStat)[MAXGRID] = new int[MAXGRID][MAXGRID];
@@ -936,6 +1011,9 @@ int main()
 		std::vector<int> step = GetStep(playerID, mapStat, sheepStat, newMapBlocks, unionFind, sheepBlocks);
 		SendStep(id_package, step);
 	}
-
+	// ****************************************************
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	printf("Time: %f\n", duration.count() / 1000.0);
 	// fclose(outfile);
 }
