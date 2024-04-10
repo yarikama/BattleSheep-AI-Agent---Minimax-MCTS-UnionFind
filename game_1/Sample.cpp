@@ -1,4 +1,3 @@
-
 #include "STcpClient.h"
 #include <stdlib.h>
 #include <iostream>
@@ -27,8 +26,8 @@
 #define weightOpponentSheep 0.27
 #define exponentDFSArea 1.5
 #define exponentEvaluate 1.25
-#define MCTSSIMULATIONS 10
-#define MCTSDEPTH 4
+#define MCTSSIMULATIONS 2
+#define MCTSDEPTH 3
 #define minimaxDepth 2
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
@@ -72,7 +71,40 @@ struct NewMapBlock{
 class UnionFind;
 class GameState;
 class MCTS;
+void printMapAndSheep(int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID]){
+    // Print column headers
+    fprintf(outfile, "y\\x ");
+    for(int x = 0; x < MAXGRID; x++){
+        fprintf(outfile, "  x=%-3d  ", x);    }
+    fprintf(outfile, "\n");
 
+    // Print separator line
+    fprintf(outfile, "   +");
+    for(int x = 0; x < MAXGRID; x++){
+        fprintf(outfile, "--------+");
+    }
+    fprintf(outfile, "\n");
+
+    // Print map and sheep data
+    for(int y = 0; y < MAXGRID; y++){
+        fprintf(outfile, "y=%-2d|", y);
+        for(int x = 0; x < MAXGRID; x++){
+            if(mapStat[x][y] == -1)
+                fprintf(outfile, "   X    |");
+            else
+                fprintf(outfile, " %d, %-3d |", mapStat[x][y], sheepStat[x][y]);
+        }
+        fprintf(outfile, "\n");
+
+        // Print separator line
+        fprintf(outfile, "   +");
+        for(int x = 0; x < MAXGRID; x++){
+            fprintf(outfile, "--------+");
+        }
+        fprintf(outfile, "\n");
+    }
+    fprintf(outfile, "\n");
+}
 class UnionFind{
 	friend class GameState;
 	private:
@@ -106,6 +138,7 @@ class GameState{
 		GameState(){};
 		GameState(int playerID, int mapState[MAXGRID][MAXGRID], int sheepState[MAXGRID][MAXGRID], UnionFind& lastUnionFind, std::vector<std::vector<sheepBlock>>& lastSheepBlocks);
 		GameState(const GameState& lastGameState);
+		GameState(const GameState& lastGameState, bool noCopy);
 		~GameState();
 		inline int getPlayerID() { return this->myPlayerID; }
 		inline int (*getMapState())[MAXGRID] { return this->mapState; }
@@ -117,6 +150,7 @@ class GameState{
 		int dfs(int x, int y, std::vector<std::vector<bool>>& visited, int anyPlayerID, int originX, int originY, bool nineNine);
 		int bfs(int x, int y, std::vector<std::vector<bool>>& visited, int anyPlayerID, bool (*areaType)(int, int, int, int[MAXGRID][MAXGRID]));
 		GameState applyMove(Move move, const GameState& state, int anyPlayerID);
+		GameState applyMoveForRollout(Move move, const GameState& state, int anyPlayerID);
 		float minimax(int depth, float alpha, float beta, int playerID, Move* bestMove = nullptr);
 		float evaluateByUnionFind();
 		inline bool isTerminal();
@@ -140,12 +174,6 @@ struct MCTSNode {
 		this->visits = 0;
 		this->value = 0;
 	}
-	// ~MCTSNode() {
-	// 	for (auto child : children) {
-	// 		delete child;
-	// 	}
-	// 	this->state.~state();
-	// }
 };
 class MCTS{
 	private:
@@ -161,6 +189,7 @@ class MCTS{
 		inline void mctsBackpropagation(MCTSNode* node, float value);
 		float mctsSimulation(MCTSNode* node, int anyPlayerID, int depth, int maxDepth);
 		double mcts();
+		MCTSNode* getRoot(){ return this->root; }
 };
 
 // MCTS constructor
@@ -196,10 +225,17 @@ MCTSNode* MCTS::mctsExpansion(MCTSNode* parent){
 float MCTS::mctsRollout(GameState &state, int anyPlayerID, int depth){
 	while(!state.isTerminal() && depth > 0){
 		std::vector<Move> moves = state.getWhereToMoves(anyPlayerID, isEveryPosibility);
+		fprintf(outfile, "============= roundPlayerID = %d ===============\n", anyPlayerID);
+		printMapAndSheep(state.getMapState(), state.getSheepState());
 		if(!moves.empty()){
+			for(auto& move : moves){
+				fprintf(outfile, "x = %d, y = %d, subSheepNumber = %d, direction = %d, displacement = %d\n", move.x, move.y, move.subSheepNumber, move.direction, move.displacement);
+			}
 			int index = rand() % moves.size();
-			state = state.applyMove(moves[index], state, anyPlayerID);
+			fprintf(outfile, "move[%d] = x = %d, y = %d, subSheepNumber = %d, direction = %d, displacement = %d\n", index, moves[index].x, moves[index].y, moves[index].subSheepNumber, moves[index].direction, moves[index].displacement);
+			state = state.applyMoveForRollout(moves[index], state, anyPlayerID);
 		}
+		printMapAndSheep(state.getMapState(), state.getSheepState());
 		anyPlayerID = (anyPlayerID % 4) + 1;
 		depth--;
 	}
@@ -215,6 +251,7 @@ inline void MCTS::mctsBackpropagation(MCTSNode* node, float value){
 }
 // MCTS 主要函數
 float MCTS::mctsSimulation(MCTSNode* node, int anyPlayerID, int depth, int maxDepth){
+	printf("mctsSimulation\n");
 	// 選擇: 沒有可以嘗試的動作，且沒有子節點，且深度不到最大(非葉節點)
 	if(node->untriedMoves.empty() && !node->children.empty() && depth < maxDepth){
 		MCTSNode* bestChild = this->mctsSelection(node);
@@ -308,41 +345,6 @@ void UnionFind::expandUnionFind(int x, int y, int anyPlayerID, int mapState[MAXG
 		}
 	}
 	if(!anyConnect) this->addRoot(x, y);	
-}
-
-void printMapAndSheep(int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID]){
-    // Print column headers
-    fprintf(outfile, "y\\x ");
-    for(int x = 0; x < MAXGRID; x++){
-        fprintf(outfile, "  x=%-3d  ", x);    }
-    fprintf(outfile, "\n");
-
-    // Print separator line
-    fprintf(outfile, "   +");
-    for(int x = 0; x < MAXGRID; x++){
-        fprintf(outfile, "--------+");
-    }
-    fprintf(outfile, "\n");
-
-    // Print map and sheep data
-    for(int y = 0; y < MAXGRID; y++){
-        fprintf(outfile, "y=%-2d|", y);
-        for(int x = 0; x < MAXGRID; x++){
-            if(mapStat[x][y] == -1)
-                fprintf(outfile, "   X    |");
-            else
-                fprintf(outfile, " %d, %-3d |", mapStat[x][y], sheepStat[x][y]);
-        }
-        fprintf(outfile, "\n");
-
-        // Print separator line
-        fprintf(outfile, "   +");
-        for(int x = 0; x < MAXGRID; x++){
-            fprintf(outfile, "--------+");
-        }
-        fprintf(outfile, "\n");
-    }
-    fprintf(outfile, "\n");
 }
 
 void printMapAndSheepAndUnion(int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], UnionFind& unionFind){
@@ -557,6 +559,14 @@ GameState::GameState(const GameState& lastGameState){
 	this->sheepBlocks = std::vector<std::vector<sheepBlock>>(lastGameState.sheepBlocks);
 	this->unionFind = UnionFind(lastGameState.unionFind);
 }
+GameState::GameState(const GameState& lastGameState, bool noCopy){
+	this->myPlayerID = lastGameState.myPlayerID;
+	this->mapState = lastGameState.mapState;
+	this->sheepState = lastGameState.sheepState;
+	this->sheepBlocks = lastGameState.sheepBlocks;
+	this->unionFind = lastGameState.unionFind;
+	this->isCopy = false;
+}
 // Destructor
 GameState::~GameState(){
 	if(this->isCopy){
@@ -698,6 +708,21 @@ GameState GameState::applyMove(Move move, const GameState& lastState, int anyPla
 	int x = move.x, y = move.y;
 	int xMove = x + dx[move.direction] * move.displacement, yMove = y + dy[move.direction] * move.displacement;
 	newState.mapState[xMove][yMove] = anyPlayerID;
+	fprintf(outfile, "sheepState[%d][%d] = %d\n", x, y, newState.sheepState[x][y]);
+	fprintf(outfile, "sheepState[%d][%d] = %d\n", xMove, yMove, newState.sheepState[xMove][yMove]);
+	newState.sheepState[x][y] -= move.subSheepNumber;
+	newState.sheepState[xMove][yMove] = move.subSheepNumber;
+	fprintf(outfile, "sheepState[%d][%d] = %d\n", x, y, newState.sheepState[x][y]);
+	fprintf(outfile, "sheepState[%d][%d] = %d\n", xMove, yMove, newState.sheepState[xMove][yMove]);
+	newState.sheepBlocks[anyPlayerID].emplace_back(std::make_pair(xMove, yMove));
+	newState.unionFind.expandUnionFind(xMove, yMove, anyPlayerID, newState.mapState);
+	return newState;
+}
+GameState GameState::applyMoveForRollout(Move move, const GameState& lastState, int anyPlayerID){
+	GameState newState(lastState, false);
+	int x = move.x, y = move.y;
+	int xMove = x + dx[move.direction] * move.displacement, yMove = y + dy[move.direction] * move.displacement;
+	newState.mapState[xMove][yMove] = anyPlayerID;
 	newState.sheepState[x][y] -= move.subSheepNumber;
 	newState.sheepState[xMove][yMove] = move.subSheepNumber;
 	newState.sheepBlocks[anyPlayerID].emplace_back(std::make_pair(xMove, yMove));
@@ -719,11 +744,7 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Mo
 		printf("value = %f\n", value);
 		return value;
 	}
-
 	// 加快 minimax 速度，先評估好的走法排在前面
-
-
-
     std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
         GameState stateA = this->applyMove(a, *this, anyPlayerID);
         GameState stateB = this->applyMove(b, *this, anyPlayerID);
@@ -879,7 +900,35 @@ inline bool GameState::isTerminal() {
 	return true;	
 }
 
+std::vector<int> getStepMCTS(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], std::vector<NewMapBlock>& newMapBlocks, UnionFind& unionFind, std::vector<std::vector<sheepBlock>>& sheepBlocks){
+    GameState initState(playerID, mapStat, sheepStat, unionFind, sheepBlocks);
+    MCTS mcts(MCTSSIMULATIONS, 1.414, MCTSDEPTH, initState, playerID);
+    mcts.mcts();
 
+    MCTSNode* bestChild = nullptr;
+    double bestValue = FLT_MIN;
+
+    for(auto& child : mcts.getRoot()->children){
+        double value = child->value / child->visits;
+        if(value > bestValue){
+            bestValue = value;
+            bestChild = child;
+        }
+    }
+
+    if(bestChild == nullptr){
+        std::vector<Move> availableMoves = initState.getWhereToMoves(playerID, isEveryPosibility);
+        if(availableMoves.empty()){
+            return {-1, -1, -1, -1}; // 無法移動
+        }else{
+            Move randomMove = availableMoves[rand() % availableMoves.size()];
+            return {randomMove.x, randomMove.y, randomMove.subSheepNumber, randomMove.direction};
+        }
+    }
+
+    Move bestMove = bestChild->untriedMoves[0];
+    return {bestMove.x, bestMove.y, bestMove.subSheepNumber, bestMove.direction};
+}
 /*
 	產出指令
     
@@ -911,10 +960,9 @@ std::vector<int> GetStep(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepS
     return {bestX, bestY, bestSubSheepNumber, bestDirection};
 }
 
-int main()
-{
-	// std::string filename = "output.txt";
-	// outfile = fopen(filename.c_str(), "w");
+int main(){
+	std::string filename = "output.txt";
+	outfile = fopen(filename.c_str(), "w");
 	auto start = std::chrono::high_resolution_clock::now();
 	// ****************************************************
 	int id_package;
@@ -945,5 +993,5 @@ int main()
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	printf("Time: %f\n", duration.count() / 1000.0);
-	// fclose(outfile);
+	fclose(outfile);
 }
