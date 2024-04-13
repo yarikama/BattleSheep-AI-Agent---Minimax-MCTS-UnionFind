@@ -1,6 +1,6 @@
 # 定義變數
 CXX = g++
-CXXFLAGS = -Wall -std=c++17 -O3
+CXXFLAGS = -Wall -std=c++17 -O3 -g
 LDFLAGS = -lws2_32
 TARGET = sample/Sample.exe
 SRCS = Sample.cpp

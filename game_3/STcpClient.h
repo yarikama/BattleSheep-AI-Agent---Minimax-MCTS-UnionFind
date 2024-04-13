@@ -1,5 +1,6 @@
+#pragma once
 //
-//	Copyright Â© 2019 by Phillip Chang
+//	Copyright ? 2019 by Phillip Chang
 //
 #pragma once
 
@@ -11,9 +12,9 @@
 #include <vector>
 
 SOCKET socketServer = INVALID_SOCKET;
-const char *infoServer[] = {"localhost", "8887"};
+const char* infoServer[] = { "localhost", "8887" };
 /*
-	è«‹å°‡ idTeam æ”¹æˆçµ„åˆ¥
+	½Ğ±N idTeam §ï¦¨²Õ§O
 */
 int idTeam = 1;
 
@@ -36,9 +37,9 @@ private:
 	WSADATA wsadata_;
 } initializerWSA;
 
-SOCKET _CreateConnectSocket(const char *strIp, const char *strPort)
+SOCKET _CreateConnectSocket(const char* strIp, const char* strPort)
 {
-	addrinfo addrinfoHint, *listDestAddrinfo = NULL, *addrinfoIterator = NULL;
+	addrinfo addrinfoHint, * listDestAddrinfo = NULL, * addrinfoIterator = NULL;
 	ZeroMemory(&addrinfoHint, sizeof(addrinfo));
 	addrinfoHint.ai_family = AF_INET;
 	addrinfoHint.ai_socktype = SOCK_STREAM;
@@ -71,13 +72,13 @@ SOCKET _CreateConnectSocket(const char *strIp, const char *strPort)
 	}
 	return socketResult;
 }
-bool _SendToSocket(SOCKET socketDest, size_t lengthSend, const BYTE *rbSend)
+bool _SendToSocket(SOCKET socketDest, size_t lengthSend, const BYTE* rbSend)
 {
-	return send(socketDest, (const char *)rbSend, (int)lengthSend, 0) == lengthSend;
+	return send(socketDest, (const char*)rbSend, (int)lengthSend, 0) == lengthSend;
 }
-bool _RecvFromSocket(SOCKET socketSrc, size_t lengthRecv, BYTE *rbRecv)
+bool _RecvFromSocket(SOCKET socketSrc, size_t lengthRecv, BYTE* rbRecv)
 {
-	return recv(socketSrc, (char *)rbRecv, (int)lengthRecv, MSG_WAITALL) == lengthRecv;
+	return recv(socketSrc, (char*)rbRecv, (int)lengthRecv, MSG_WAITALL) == lengthRecv;
 }
 
 void _ConnectToServer(int cntRecursive = 0)
@@ -90,7 +91,7 @@ void _ConnectToServer(int cntRecursive = 0)
 	while (socketServer == INVALID_SOCKET)
 		socketServer = _CreateConnectSocket(infoServer[0], infoServer[1]);
 
-	if (!_SendToSocket(socketServer, sizeof(int), (BYTE *)&idTeam))
+	if (!_SendToSocket(socketServer, sizeof(int), (BYTE*)&idTeam))
 	{
 		closesocket(socketServer);
 		socketServer = INVALID_SOCKET;
@@ -110,9 +111,9 @@ void _ReconnectToServer()
 }
 
 /*
-    å–å¾—åˆå§‹åŒ–åœ°åœ–
+	¨ú±oªì©l¤Æ¦a¹Ï
 */
-void GetMap(int &id_package, int &playerID,int mapStat[12][12])
+void GetMap(int& id_package, int& playerID, int mapStat[12][12])
 {
 	if (socketServer == INVALID_SOCKET)
 	{
@@ -131,50 +132,50 @@ void GetMap(int &id_package, int &playerID,int mapStat[12][12])
 		socketServer = INVALID_SOCKET;
 		return GetMap(id_package, playerID, mapStat);
 	}
-	int codeHeader = *((int *)rbHeader);
-	id_package = *((int *)(rbHeader + 4));
+	int codeHeader = *((int*)rbHeader);
+	id_package = *((int*)(rbHeader + 4));
 	if (codeHeader == 0)
-	{	
+	{
 		return;
 	}
 
 	//playerID(1~4)
-    if (!_RecvFromSocket(socketServer, 4, (BYTE *)&(playerID) ))
+	if (!_RecvFromSocket(socketServer, 4, (BYTE*)&(playerID)))
 	{
-        printf("[Error] : Connection lose, trying to reconnect...\n");
+		printf("[Error] : Connection lose, trying to reconnect...\n");
 		closesocket(socketServer);
 		socketServer = INVALID_SOCKET;
 		return GetMap(id_package, playerID, mapStat);
-    }
-    
-    //mapStat
-    for (int i = 0; i < 12; ++i)
+	}
+
+	//mapStat
+	for (int i = 0; i < 12; ++i)
 	{
-        for(int j = 0; j < 12; ++j)
-        {
-            if (!_RecvFromSocket(socketServer, 4, (BYTE *)&(mapStat[i][j]) ))
-            {
-                printf("[Error] : Connection lose, trying to reconnect...\n");
-                closesocket(socketServer);
-                socketServer = INVALID_SOCKET;
-                return GetMap(id_package, playerID, mapStat);
-            }
-        }
-    }
+		for (int j = 0; j < 12; ++j)
+		{
+			if (!_RecvFromSocket(socketServer, 4, (BYTE*)&(mapStat[i][j])))
+			{
+				printf("[Error] : Connection lose, trying to reconnect...\n");
+				closesocket(socketServer);
+				socketServer = INVALID_SOCKET;
+				return GetMap(id_package, playerID, mapStat);
+			}
+		}
+	}
 
 }
 
 
 /*
-	å–å¾—ç•¶å‰éŠæˆ²ç‹€æ…‹
+	¨ú±o·í«e¹CÀ¸ª¬ºA
 
 	return (stop_program), (id_package, mapStat, sheepStat)
-	stop_program : True è¡¨ç¤ºç•¶å‰æ‡‰ç«‹å³çµæŸç¨‹å¼ï¼ŒFalse è¡¨ç¤ºç•¶å‰è¼ªåˆ°è‡ªå·±ä¸‹æ£‹
-	id_package : ç•¶å‰æ£‹ç›¤ç‹€æ…‹çš„ idï¼Œå›å‚³ç§»å‹•è¨Šæ¯æ™‚éœ€è¦ä½¿ç”¨
-	mapStat: ç•¶å‰æ£‹ç›¤ä½”é ˜çš„ç‹€æ…‹
-    gameStat: ç•¶å‰ç¾Šç¾¤åˆ†å¸ƒç‹€æ…‹
+	stop_program : True ªí¥Ü·í«eÀ³¥ß§Yµ²§ôµ{¦¡¡AFalse ªí¥Ü·í«e½ü¨ì¦Û¤v¤U´Ñ
+	id_package : ·í«e´Ñ½Lª¬ºAªº id¡A¦^¶Ç²¾°Ê°T®§®É»İ­n¨Ï¥Î
+	mapStat: ·í«e´Ñ½L¦û»âªºª¬ºA
+	gameStat: ·í«e¦Ï¸s¤À¥¬ª¬ºA
 */
-bool GetBoard(int &id_package, int mapStat[12][12], int sheepStat[12][12]  )
+bool GetBoard(int& id_package, int mapStat[12][12], int sheepStat[12][12])
 {
 	if (socketServer == INVALID_SOCKET)
 	{
@@ -193,55 +194,55 @@ bool GetBoard(int &id_package, int mapStat[12][12], int sheepStat[12][12]  )
 		socketServer = INVALID_SOCKET;
 		return GetBoard(id_package, mapStat, sheepStat);
 	}
-	int codeHeader = *((int *)rbHeader);
-	id_package = *((int *)(rbHeader + 4));
+	int codeHeader = *((int*)rbHeader);
+	id_package = *((int*)(rbHeader + 4));
 	if (codeHeader == 0)
-	{	
+	{
 		return true;
 	}
 
-    
-    //mapStat
-    for (int i = 0; i < 12; ++i)
+
+	//mapStat
+	for (int i = 0; i < 12; ++i)
 	{
-        for(int j = 0; j < 12; ++j)
-        {
-            if (!_RecvFromSocket(socketServer, 4, (BYTE *)&(mapStat[i][j]) ))
-            {
-                printf("[Error] : Connection lose, trying to reconnect...\n");
-                closesocket(socketServer);
-                socketServer = INVALID_SOCKET;
-                return GetBoard(id_package, mapStat, sheepStat);
-            }
-        }
-    }
+		for (int j = 0; j < 12; ++j)
+		{
+			if (!_RecvFromSocket(socketServer, 4, (BYTE*)&(mapStat[i][j])))
+			{
+				printf("[Error] : Connection lose, trying to reconnect...\n");
+				closesocket(socketServer);
+				socketServer = INVALID_SOCKET;
+				return GetBoard(id_package, mapStat, sheepStat);
+			}
+		}
+	}
 
-    //sheepStat
-    for (int i = 0; i < 12; ++i)
+	//sheepStat
+	for (int i = 0; i < 12; ++i)
 	{
-        for(int j = 0; j < 12; ++j)
-        {
-            if (!_RecvFromSocket(socketServer, 4, (BYTE *)&(sheepStat[i][j]) ))
-            {
-                printf("[Error] : Connection lose, trying to reconnect...\n");
-                closesocket(socketServer);
-                socketServer = INVALID_SOCKET;
-                return GetBoard(id_package, mapStat, sheepStat);
-            }
-        }
-    }
+		for (int j = 0; j < 12; ++j)
+		{
+			if (!_RecvFromSocket(socketServer, 4, (BYTE*)&(sheepStat[i][j])))
+			{
+				printf("[Error] : Connection lose, trying to reconnect...\n");
+				closesocket(socketServer);
+				socketServer = INVALID_SOCKET;
+				return GetBoard(id_package, mapStat, sheepStat);
+			}
+		}
+	}
 
-	
 
-	
+
+
 
 	return false;
 }
 
 /*
-å‚³é€èµ·å§‹ä½ç½®åº§æ¨™, pos=<x,y>
+¶Ç°e°_©l¦ì¸m®y¼Ğ, pos=<x,y>
 */
-void SendInitPos(int id_package, std::vector<int> &pos)
+void SendInitPos(int id_package, std::vector<int>& pos)
 {
 	if (socketServer == INVALID_SOCKET)
 	{
@@ -251,7 +252,7 @@ void SendInitPos(int id_package, std::vector<int> &pos)
 
 	std::vector<BYTE> rbData;
 	rbData.resize(16);
-	int *rbInsert = (int *)&(rbData[0]);
+	int* rbInsert = (int*)&(rbData[0]);
 	*rbInsert++ = 1;
 	*rbInsert++ = id_package;
 	*rbInsert++ = pos[0];
@@ -266,17 +267,17 @@ void SendInitPos(int id_package, std::vector<int> &pos)
 
 
 /*
-	å‘ server å‚³é”ç§»å‹•è¨Šæ¯
-    id_package : æƒ³è¦å›å¾©çš„è¨Šæ¯çš„ id_package
-    Step = <x, y, m, dir>
-            x, y è¡¨ç¤ºè¦é€²è¡Œå‹•ä½œçš„åº§æ¨™ 
-            m = è¦åˆ‡å‰²æˆç¬¬äºŒç¾¤çš„ç¾Šç¾¤æ•¸é‡
-            dir = ç§»å‹•æ–¹å‘(1~9),å°æ‡‰æ–¹å‘å¦‚ä¸‹åœ–æ‰€ç¤º
-            1 2 3
+	¦V server ¶Ç¹F²¾°Ê°T®§
+	id_package : ·Q­n¦^´_ªº°T®§ªº id_package
+	Step = <x, y, m, dir>
+			x, y ªí¥Ü­n¶i¦æ°Ê§@ªº®y¼Ğ
+			m = ­n¤Á³Î¦¨²Ä¤G¸sªº¦Ï¸s¼Æ¶q
+			dir = ²¾°Ê¤è¦V(1~9),¹ïÀ³¤è¦V¦p¤U¹Ï©Ò¥Ü
+			1 2 3
 			4 X 6
 			7 8 9
 */
-void SendStep(int id_package, std::vector<int> &Step)
+void SendStep(int id_package, std::vector<int>& Step)
 {
 	if (socketServer == INVALID_SOCKET)
 	{
@@ -286,13 +287,13 @@ void SendStep(int id_package, std::vector<int> &Step)
 
 	std::vector<BYTE> rbData;
 	rbData.resize(24);
-	int *rbInsert = (int *)&(rbData[0]);
+	int* rbInsert = (int*)&(rbData[0]);
 	*rbInsert++ = 1;
 	*rbInsert++ = id_package;
 	*rbInsert++ = Step[0];
 	*rbInsert++ = Step[1];
-    *rbInsert++ = Step[2];
-    *rbInsert++ = Step[3];
+	*rbInsert++ = Step[2];
+	*rbInsert++ = Step[3];
 
 	if (!_SendToSocket(socketServer, rbData.size(), &(rbData[0])))
 	{

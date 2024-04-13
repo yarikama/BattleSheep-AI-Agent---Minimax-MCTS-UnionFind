@@ -1,0 +1,69 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\workspace\\112-2\\AI_Capstone\\AI_project2_2024\\game_3\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\libtorch\\share\\cmake\\Caffe2\\Caffe2Config.cmake||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\workspace\\112-2\\AI_Capstone\\AI_project2_2024\\game_3\\CMakeSettings.json||{10608CD5-279C-4A28-BD5F-BA2CFCE06219}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:CMakeSettings.json||{10608CD5-279C-4A28-BD5F-BA2CFCE06219}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\workspace\\112-2\\AI_Capstone\\AI_project2_2024\\game_3\\CMakeLists.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:CMakeLists.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Caffe2Config.cmake",
+              "DocumentMoniker": "C:\\libtorch\\share\\cmake\\Caffe2\\Caffe2Config.cmake",
+              "RelativeDocumentMoniker": "..\\..\\..\\..\\..\\libtorch\\share\\cmake\\Caffe2\\Caffe2Config.cmake",
+              "ToolTip": "C:\\libtorch\\share\\cmake\\Caffe2\\Caffe2Config.cmake",
+              "RelativeToolTip": "..\\..\\..\\..\\..\\libtorch\\share\\cmake\\Caffe2\\Caffe2Config.cmake",
+              "ViewState": "AQIAAE4AAAAAAAAAAAAuwFsAAABLAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2024-04-12T15:12:01.466Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "CMakeSettings.json",
+              "DocumentMoniker": "C:\\workspace\\112-2\\AI_Capstone\\AI_project2_2024\\game_3\\CMakeSettings.json",
+              "RelativeDocumentMoniker": "CMakeSettings.json",
+              "ToolTip": "C:\\workspace\\112-2\\AI_Capstone\\AI_project2_2024\\game_3\\CMakeSettings.json",
+              "RelativeToolTip": "CMakeSettings.json",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2024-04-12T15:10:07.816Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "CMakeLists.txt",
+              "DocumentMoniker": "C:\\workspace\\112-2\\AI_Capstone\\AI_project2_2024\\game_3\\CMakeLists.txt",
+              "RelativeDocumentMoniker": "CMakeLists.txt",
+              "ToolTip": "C:\\workspace\\112-2\\AI_Capstone\\AI_project2_2024\\game_3\\CMakeLists.txt",
+              "RelativeToolTip": "CMakeLists.txt",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAQAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
+              "WhenOpened": "2024-04-12T15:05:23.808Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
