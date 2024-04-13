@@ -1,4 +1,4 @@
-#include <STcpClient.h>
+#include "STcpClient.h"
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
@@ -26,9 +26,9 @@
 #define weightOpponentSheep 0.27
 #define exponentDFSArea 1.5
 #define exponentEvaluate 1.25
-#define MCTSSIMULATIONS 15
-#define MCTSDEPTH 3
-#define minimaxDepth 6
+#define MCTSSIMULATIONS 100
+#define MCTSDEPTH 7
+#define minimaxDepth 2
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
 #define isEveryPosibility false
@@ -813,36 +813,6 @@ inline bool GameState::isTerminal() {
 	return true;	
 }
 
-std::vector<int> getStepMCTS(int playerID, int mapStat[MAXGRID][MAXGRID], int sheepStat[MAXGRID][MAXGRID], std::vector<NewMapBlock>& newMapBlocks, UnionFind& unionFind, std::vector<std::vector<sheepBlock>>& sheepBlocks){
-    GameState initState(playerID, mapStat, sheepStat, unionFind, sheepBlocks);
-    MCTS mcts(MCTSSIMULATIONS, 1.414, MCTSDEPTH, initState, playerID);
-    mcts.mcts();
-
-    MCTSNode* bestChild = nullptr;
-    double bestValue = FLT_MIN;
-
-    for(auto& child : mcts.getRoot()->children){
-        double value = child->value / child->visits;
-        if(value > bestValue){
-            bestValue = value;
-            bestChild = child;
-        }
-    }
-
-    if(bestChild == nullptr){
-        std::vector<Move> availableMoves = initState.getWhereToMoves(playerID, isEveryPosibility);
-        if(availableMoves.empty()){
-            return {-1, -1, -1, -1}; // 無法移動
-        }else{
-            Move randomMove = availableMoves[rand() % availableMoves.size()];
-            return {randomMove.x, randomMove.y, randomMove.subSheepNumber, randomMove.direction};
-        }
-    }
-
-    Move bestMove = bestChild->untriedMoves[0];
-    return {bestMove.x, bestMove.y, bestMove.subSheepNumber, bestMove.direction};
-}
-
 std::vector<int> GetStep(int playerID, 
 						 int mapStat[MAXGRID][MAXGRID], 
 						 int sheepStat[MAXGRID][MAXGRID], 
@@ -1030,7 +1000,7 @@ int main(){
 			sheepBlocks[newMapBlock.playerID].emplace_back(std::make_pair(newMapBlock.x, newMapBlock.y));
 			unionFind.expandUnionFind(newMapBlock.x, newMapBlock.y, newMapBlock.playerID, mapStat);
 		}
-		std::vector<int> step = GetStep(playerID, mapStat, sheepStat, newMapBlocks, unionFind, sheepBlocks);
+		std::vector<int> step = GetStep(playerID, mapStat, sheepStat, unionFind, sheepBlocks);
 		SendStep(id_package, step);
 	}
 	// ****************************************************
