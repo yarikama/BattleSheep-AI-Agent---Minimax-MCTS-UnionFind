@@ -1,44 +1,64 @@
 import subprocess
-import re
+import pyautogui
 import time
-import os
+import re
 
-num_runs = 5  # 執行次數
+output_file = "AI_game_output.txt"
+summary_file = "AI_game_summary.txt"
+num_games = 20
+num_players = 4
 
-# 初始化統計結果
-player_ranks = {i: [0] * 4 for i in range(1, 5)}
+# 初始化記錄每個玩家獲得各名次的次數
+rank_counts = [[0] * num_players for _ in range(num_players)]
 
-for i in range(num_runs):
-    print(f"Running game {i + 1}/{num_runs}")
-    
-    # 執行遊戲並捕獲輸出
-    process = subprocess.Popen(['.\AI_game.exe'], shell=True)
-    time.sleep(25)
-    subprocess.call(['taskkill', '/F', '/T', '/PID', str(process.pid)])
-    
-    # 從 result.txt 文件中讀取輸出
-    with open('stderr.txt', 'r') as file:
+for i in range(num_games):
+    # 執行 AI_game.exe 並將標準輸出重定向到檔案
+    print(f"Running game {i + 1}/{num_games}")
+    with open(output_file, "w") as file:
+        exe_process = subprocess.Popen(["AI_game.exe"], stdout=file, stdin=subprocess.PIPE)
+
+    # 等待Battle Sheep視窗出現
+    while True:
+        battle_sheep_window = pyautogui.getWindowsWithTitle("battle sheep")
+        if not battle_sheep_window:
+            time.sleep(1)
+        else:
+            window = battle_sheep_window[0]
+            window_x, window_y = window.left, window.top
+            # 將焦點移動到Battle Sheep視窗
+            pyautogui.click(window_x + 10, window_y + 10)
+            # 發送Alt+F4關閉視窗
+            pyautogui.hotkey('alt', 'f4')
+            break
+
+    exe_process.stdin.write('q'.encode('utf-8'))
+    exe_process.stdin.flush()
+
+    # 讀取輸出檔案的內容
+    with open(output_file, "r") as file:
         output = file.read()
-    
-    # 從輸出中提取分數資訊
-    scores = re.findall(r'player (\d+)=team \d+ : (\[\d.\]+)', output)
-    print("Extracted scores:")
-    for player, score in scores:
-        print(f"Player {player}: {score}")
-    
-    # 將分數轉換為浮點數並排序
-    scores = [(int(player), float(score)) for player, score in scores]
-    scores.sort(key=lambda x: x[1], reverse=True)
-    
-    # 更新統計結果
-    for rank, (player, _) in enumerate(scores):
-        player_ranks[player][rank] += 1
-    
-    # 等待 1 秒再進行下一次迭代
-    time.sleep(1)
 
-# 輸出統計結果
-for player, ranks in player_ranks.items():
-    print(f"Player {player}:")
-    for rank, count in enumerate(ranks, start=1):
-        print(f" Rank {rank}: {count}/{num_runs} ({count / num_runs * 100:.2f}%)")
+    # 使用正則表達式提取玩家分數
+    scores = re.findall(r'player \d+=team \d+ : ([\d.]+)', output)
+    # 將分數轉換為浮點數
+    scores = [float(score) for score in scores]
+    # 根據分數排序並生成名次
+    sorted_scores = sorted(scores, reverse=True)
+    ranks = [sorted_scores.index(score) + 1 for score in scores]
+
+    # 更新每個玩家獲得各名次的次數
+    for player, rank in enumerate(ranks):
+        rank_counts[player][rank - 1] += 1
+
+    time.sleep(1.5)
+
+    # 計算每個玩家獲得各名次的比率
+    with open(summary_file, "w") as file:
+        file.write(f"Summary of {num_games} games:\n")
+        for player in range(num_players):
+            file.write(f"Player {player + 1}:\n")
+            for rank in range(num_players):
+                count = rank_counts[player][rank]
+                ratio = count / num_games
+                file.write(f"  Rank {rank + 1}: {count} times, Ratio: {ratio:.2f}\n")
+            file.write("\n")

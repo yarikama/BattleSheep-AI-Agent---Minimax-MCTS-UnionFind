@@ -29,22 +29,34 @@
 #ifndef exponentEvaluate
 #define exponentEvaluate 1.8
 #endif
+
 #ifndef MCTSSIMULATIONS
 #define MCTSSIMULATIONS 90
 #endif
+
 #ifndef MCTSDEPTH
 #define MCTSDEPTH 9
 #endif
+
 #ifndef minimaxDepth
 #define minimaxDepth 2
+#endif
+
+#ifndef isEveryPosibilityMinimax
+#define isEveryPosibilityMinimax 0
+#endif
+
+#ifndef isEveryPosibilityMCTS
+#define isEveryPosibilityMCTS 1
+#endif
+
+#ifndef weightRatioOfArea 
+#define weightRatioOfArea 0.005
 #endif
 
 
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
-#define isEveryPosibilityMinimax 0
-#define isEveryPosibilityMCTS 1
-#define weightRatioOfArea 0.005
 
 FILE* outfile;
 

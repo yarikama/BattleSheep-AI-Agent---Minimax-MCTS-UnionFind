@@ -22,10 +22,10 @@ CXX = g++
 CXXFLAGS = -Wall -std=c++17 -O3
 LDFLAGS = -lws2_32
 
-PARAMS1 = -DexponentEvaluate=1.5 -DMCTSSIMULATIONS=90 -DMCTSDEPTH=9 -DminimaxDepth=2 -DTEAM_ID=1
+PARAMS1 = -DexponentEvaluate=1.8 -DMCTSSIMULATIONS=90 -DMCTSDEPTH=9 -DminimaxDepth=2 -DTEAM_ID=1
 PARAMS2 = -DexponentEvaluate=1.8 -DMCTSSIMULATIONS=90 -DMCTSDEPTH=9 -DminimaxDepth=2 -DTEAM_ID=2
-PARAMS3 = -DexponentEvaluate=2.0 -DMCTSSIMULATIONS=90 -DMCTSDEPTH=9 -DminimaxDepth=2 -DTEAM_ID=3
-PARAMS4 = -DexponentEvaluate=2.3 -DMCTSSIMULATIONS=90 -DMCTSDEPTH=9 -DminimaxDepth=2 -DTEAM_ID=4
+PARAMS3 = -DexponentEvaluate=1.8 -DMCTSSIMULATIONS=90 -DMCTSDEPTH=9 -DminimaxDepth=2 -DTEAM_ID=3
+PARAMS4 = -DexponentEvaluate=1.8 -DMCTSSIMULATIONS=90 -DMCTSDEPTH=9 -DminimaxDepth=2 -DTEAM_ID=4
 
 TARGET1 = sample/Sample1.exe
 TARGET2 = sample/Sample2.exe
