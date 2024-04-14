@@ -25,9 +25,9 @@
 #define weightOpponentNum 0.28
 #define weightOpponentSheep 0.27
 #define exponentAreaSheepNumber 1.5
-#define exponentEvaluate 1.25
-#define MCTSSIMULATIONS 200
-#define MCTSDEPTH 13
+#define exponentEvaluate 1.8
+#define MCTSSIMULATIONS 90
+#define MCTSDEPTH 9
 #define minimaxDepth 2
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
@@ -783,8 +783,8 @@ float GameState::evaluateByUnionFind(){
 	// return rank * rank;
 
 	int rank = (playerArea[this->myPlayerID] > playerArea[(this->myPlayerID % 4) + 1])? 2 : 1;
-	printf("rank = %d\n", rank);
-	return rank * rank;  
+	// printf("rank = %f\n", rank * rank + 0.01 * playerArea[this->myPlayerID]);
+	return rank * rank + 0.01 * playerArea[this->myPlayerID];
 }
 
 inline bool GameState::isTerminal() {

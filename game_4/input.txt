@@ -3,7 +3,7 @@
 2
 ./sample/Sample_2.exe
 3
-./sample/Sample_3.exe
+./sample/Sample3.exe
 4
 ./sample/Sample.exe
 4
