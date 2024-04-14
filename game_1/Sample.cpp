@@ -19,15 +19,15 @@
 #define powSurroundLen 1.5
 #define weightSurroundLen 1
 #define weightEmptyNum 2
-#define rewardOpponentNear 10
+#define rewardOpponentNear 13
 #define rewardOpponentFar 5
 #define weightDfsArea 0.45
 #define weightOpponentNum 0.28
 #define weightOpponentSheep 0.27
 #define exponentDFSArea 1.5
-#define exponentEvaluate 1.25
-#define MCTSSIMULATIONS 200
-#define MCTSDEPTH 13
+#define exponentEvaluate 1.8
+#define MCTSSIMULATIONS 90
+#define MCTSDEPTH 9
 #define minimaxDepth 2
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
@@ -662,7 +662,7 @@ std::vector<float> GameState::calculateArea(int x, int y, int anyPlayerID){
 			area = pow(this->bfs(xMove, yMove, visited, anyPlayerID, isPositionValidForOccupyingOrBelongToPlayer), exponentDFSArea);
 			totalArea[0] += area;
 		} 	
-		if(this->mapState[xMove][yMove] > 0) {
+		if(this->mapState[xMove][yMove] > 0 and this->mapState[xMove][yMove] != anyPlayerID) {
 			// 這裡的 1/7 是因為 8個方向中有一個是自己
 			// (1)對手數量
 			totalArea[1] += (1/7.0);
