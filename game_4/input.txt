@@ -5,5 +5,5 @@
 3
 ./sample/Sample_3.exe
 4
-./sample/Sample_4.exe
+./sample/Sample.exe
 4

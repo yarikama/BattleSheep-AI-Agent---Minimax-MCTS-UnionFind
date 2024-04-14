@@ -340,7 +340,7 @@ void UnionFind::expandUnionFind(int x, int y, int anyPlayerID, int mapState[MAXG
 	for(int i = 0 ; i < 4 ; ++i){
 		int xRound = x + dxx[i];
 		int yRound = y + dyy[i];
-		if(isPositionBelongToTeam(xRound, yRound, anyPlayerID, mapState)){
+		if(isPositionBelongToPlayer(xRound, yRound, anyPlayerID, mapState)){
 			this->unionSet(x, y, xRound, yRound);
 			anyConnect = true;
 		}
@@ -649,12 +649,12 @@ std::vector<float> GameState::calculateArea(int x, int y, int anyPlayerID){
 		//(0)加總連通面積1.25次方 DFS
 		if(!isPositionValid(xMove, yMove)) continue;
 		if(isPositionValidForOccupying(xMove, yMove, this->mapState)){
-			area = pow(this->bfs(xMove, yMove, visited, anyPlayerID, isPositionValidForOccupyingOrBelongToTeam), exponentAreaSheepNumber);
+			area = pow(this->bfs(xMove, yMove, visited, anyPlayerID, isPositionValidForOccupyingOrBelongToPlayer), exponentAreaSheepNumber);
 			totalArea[0] += area;
 		} 	
 		if( this->mapState[xMove][yMove] > 0 
 		and this->mapState[xMove][yMove] != anyPlayerID 
-		and this->mapState[xMove][yMove] != ((anyPlayerID + 2)%4)) {
+		and this->mapState[xMove][yMove] != ((anyPlayerID % 4) + 2) ){
 			// 這裡的 1/7 是因為 8個方向中有一個是自己
 			// (1)對手數量
 			totalArea[1] += (1/7.0);
@@ -737,7 +737,7 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Mo
 		return stateA.evaluateByUnionFind() > stateB.evaluateByUnionFind();
     });
 
-	if(anyPlayerID == this->myPlayerID){
+	if(anyPlayerID == this->myPlayerID or anyPlayerID == ((this->myPlayerID % 4) + 2)){
         float maxEvaluation = FLT_MIN;
 		for(auto& move : availableMoves){
 			GameState newState = this->applyMove(move, *this, anyPlayerID);
@@ -750,9 +750,7 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Mo
 		}
 
 		return maxEvaluation;
-	}
-
-	if(anyPlayerID != this->myPlayerID){
+	}else{
         float minEvaluation = FLT_MAX;
 
 		for(auto& move : availableMoves){
@@ -777,12 +775,16 @@ float GameState::evaluateByUnionFind(){
 		int anyPlayerID = this->mapState[rootSize.x][rootSize.y];
 		if(anyPlayerID == 0 or anyPlayerID == -1) continue;
 		playerArea[anyPlayerID] += pow(rootSize.size, exponentEvaluate);
-		playerArea[(anyPlayerID + 2) % 4] += pow(rootSize.size, exponentEvaluate);
+		playerArea[(anyPlayerID % 4) + 2] += pow(rootSize.size, exponentEvaluate);
 	}
 	// return playerArea[this->myPlayerID];
-	int rank = 1;
-	for(int i = 1 ; i <= 4 ; ++i) if(playerArea[i] < playerArea[this->myPlayerID]) ++rank;
-	return rank * rank;
+	// int rank = 1;
+	// for(int i = 1 ; i <= 4 ; ++i) if(playerArea[i] < playerArea[this->myPlayerID]) ++rank;
+	// return rank * rank;
+
+	int rank = (playerArea[this->myPlayerID] > playerArea[(this->myPlayerID % 4) + 1])? 2 : 1;
+	printf("rank = %d\n", rank);
+	return rank * rank;  
 }
 
 inline bool GameState::isTerminal() {
