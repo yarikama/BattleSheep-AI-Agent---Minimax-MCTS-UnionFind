@@ -31,7 +31,9 @@
 #define minimaxDepth 2
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
-#define isEveryPosibility false
+#define isEveryPosibilityMinimax 0
+#define isEveryPosibilityMCTS 1
+#define weightRatioOfArea 0.005
 
 FILE* outfile;
 
@@ -184,7 +186,7 @@ struct MCTSNode {
 		this->parent = lastParent;
 		this->roundPlayerID = roundPlayerID;
 		this->state = new GameState(state);
-		this->untriedMoves = this->state->getWhereToMoves(roundPlayerID, isEveryPosibility);
+		this->untriedMoves = this->state->getWhereToMoves(roundPlayerID, isEveryPosibilityMCTS);
 		this->visits = 0;
 		this->value = 0;
 	}
@@ -243,7 +245,7 @@ MCTSNode* MCTS::mctsExpansion(MCTSNode* parent){
 // 模擬遊戲直到遊戲結束
 float MCTS::mctsRollout(GameState &state, int anyPlayerID, int depth){
 	while(!state.isTerminal() && depth > 0){
-		std::vector<Move> moves = state.getWhereToMoves(anyPlayerID, isEveryPosibility);
+		std::vector<Move> moves = state.getWhereToMoves(anyPlayerID, isEveryPosibilityMCTS);
 		if(!moves.empty()){
 			int index = rand() % moves.size();
 			state = state.applyMoveForRollout(moves[index], state, anyPlayerID);
@@ -744,7 +746,7 @@ GameState GameState::applyMoveForRollout(Move move, const GameState& lastState, 
 // 下一個玩家是誰(anyPlayerID % 4 + 1)
 float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Move* bestMove){
 	// 找所有可以動的地方
-	std::vector<Move> availableMoves = this->getWhereToMoves(anyPlayerID, isEveryPosibility);
+	std::vector<Move> availableMoves = this->getWhereToMoves(anyPlayerID, isEveryPosibilityMinimax);
 	// 終止條件
 	if(availableMoves.empty()) return this->evaluateByUnionFind();
 	if(depth == 0){
@@ -802,14 +804,14 @@ float GameState::evaluateByUnionFind(){
 	// return playerArea[this->myPlayerID];
 	int rank = 1;
 	for(int i = 1 ; i <= 4 ; ++i) if(playerArea[i] < playerArea[this->myPlayerID]) ++rank;
-	return rank * rank;
+	return rank * rank + weightRatioOfArea * playerArea[this->myPlayerID];
 }
 
 inline bool GameState::isTerminal() {
-	if(!getWhereToMoves(1, isEveryPosibility).empty()) return false;
-	if(!getWhereToMoves(2, isEveryPosibility).empty()) return false;
-	if(!getWhereToMoves(3, isEveryPosibility).empty()) return false;
-	if(!getWhereToMoves(4, isEveryPosibility).empty()) return false;
+	if(!getWhereToMoves(1, isEveryPosibilityMCTS).empty()) return false;
+	if(!getWhereToMoves(2, isEveryPosibilityMCTS).empty()) return false;
+	if(!getWhereToMoves(3, isEveryPosibilityMCTS).empty()) return false;
+	if(!getWhereToMoves(4, isEveryPosibilityMCTS).empty()) return false;
 	return true;	
 }
 

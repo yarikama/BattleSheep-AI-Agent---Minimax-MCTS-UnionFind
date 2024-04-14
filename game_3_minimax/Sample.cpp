@@ -1,4 +1,4 @@
-#include "STcpClient.h"
+﻿#include "STcpClient.h"
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
@@ -15,7 +15,7 @@
 #include <set>
 #include <future>
 
-#define MAXGRID 15
+#define MAXGRID 12
 #define powSurroundLen 1.5
 #define weightSurroundLen 1
 #define weightEmptyNum 2
@@ -533,10 +533,10 @@ std::vector<int> InitPos(int playerID, int mapStat[MAXGRID][MAXGRID]) {
 
 			// fprintf(outfile, "(%d, %d), score = (%d*%d - %d*%f/8)", x, y, weightEmptyNum, scoreEmptyNum, weightSurroundLen, scoreSurroundNum);
             // 根據與對手的距離調整分數
-			if (opponentDistance <= 4 && opponentDistance >= 0) {
+			if (opponentDistance <= 2 && opponentDistance >= 0) {
                 score -= rewardOpponentNear;  // 離對手太近,減少分數
 				// fprintf(outfile, " - %d = %f, distance = %d\n", rewardOpponentNear, score, opponentDistance);
-            } else if (opponentDistance >= 7) {
+            } else if (opponentDistance >= 6) {
                 score += rewardOpponentFar;   // 離對手較遠,增加分數
 				// fprintf(outfile, " - %d = %f, distance = %d\n", rewardOpponentFar, score, opponentDistance);
             }
@@ -817,12 +817,41 @@ inline bool GameState::isTerminal() {
 
 std::vector<int> GetStep(int playerID, 
 						 int mapStat[MAXGRID][MAXGRID], 
-						 int sheepStat[MAXGRID][MAXGRID], 
-						 UnionFind& unionFind, 
-						 std::vector<std::vector<sheepBlock>>& sheepBlocks){
+						 int sheepStat[MAXGRID][MAXGRID]){
+	// *************************************************
+	int (*newMapStat)[MAXGRID] = new int[MAXGRID][MAXGRID];
+	std::vector<std::vector<sheepBlock>>sheepBlocks = std::vector<std::vector<sheepBlock>>(5, std::vector<sheepBlock>());
+	UnionFind unionFind(MAXGRID * MAXGRID);
+
+	for(int i = 0 ; i < MAXGRID ; ++i){
+		for(int j = 0 ; j < MAXGRID ; ++j){
+			newMapStat[i][j] = mapStat[i][j];
+			if(mapStat[i][j] > 0){
+				sheepBlocks[mapStat[i][j]].emplace_back(std::make_pair(i, j));
+				unionFind.expandUnionFind(i, j, mapStat[i][j], mapStat);
+			}
+		}
+	}
+	// 建立假的 SheepState
+	int (*newSheepStat)[MAXGRID] = new int[MAXGRID][MAXGRID];
+	for(int i = 1 ; i <= 4 ; ++i){
+		if(i == playerID){
+			for(auto& block : sheepBlocks[i]){
+				newSheepStat[block.first][block.second] = sheepStat[block.first][block.second];
+			}
+		}else{
+			int sheepAverageNumber = std::ceil(16.0 / sheepBlocks[i].size());
+			for(auto& block : sheepBlocks[i]){
+				newSheepStat[block.first][block.second] = sheepAverageNumber;
+			}
+		}
+	}
+	// *************************************************
+
 	Move *bestMove = new Move{-1, -1, -1, -1, -1};
-	GameState initState(playerID, mapStat, sheepStat, unionFind, sheepBlocks);
+	GameState initState(playerID, newMapStat, newSheepStat, unionFind, sheepBlocks);
 	initState.minimax(minimaxDepth, FLT_MIN, FLT_MAX, playerID, bestMove);
+	
 	int bestX = bestMove->x;
 	int bestY = bestMove->y;
 	int bestSubSheepNumber = bestMove->subSheepNumber;
@@ -976,38 +1005,47 @@ bool simpleAgentChooseToMove(int anyPlayerID,
 // }
 
 
-int main(){
-	// std::string filename = "output.txt";
-	// outfile = fopen(filename.c_str(), "w");
-	auto start = std::chrono::high_resolution_clock::now();
-	// ****************************************************
-	int id_package;
-	int playerID;
-	int (*mapStat)[MAXGRID] = new int[MAXGRID][MAXGRID];
-	int (*lastMapStat)[MAXGRID] = new int[MAXGRID][MAXGRID];
-	int sheepStat[MAXGRID][MAXGRID];
-	std::vector<std::vector<sheepBlock>> sheepBlocks(5, std::vector<sheepBlock>());
-	UnionFind unionFind(MAXGRID * MAXGRID);
 
-	GetMap(id_package, playerID, mapStat);
-	std::copy(&mapStat[0][0], &mapStat[0][0] + MAXGRID * MAXGRID, &lastMapStat[0][0]);
+int main() {
+	std::string filename = "output.txt";
+	outfile = fopen(filename.c_str(), "w");
+    int id_package;
+    int playerID;
+    int mapStat[12][12];
+    int sheepStat[12][12];
 
-	std::vector<int> init_pos = InitPos(playerID, mapStat);
-	SendInitPos(id_package,init_pos);
+	
 
-	while (true){
-		if(GetBoard(id_package, mapStat, sheepStat)) break;
-		std::vector<NewMapBlock> newMapBlocks = compareChangesInMapState(mapStat, lastMapStat);
-		for(auto &newMapBlock : newMapBlocks){
-			sheepBlocks[newMapBlock.playerID].emplace_back(std::make_pair(newMapBlock.x, newMapBlock.y));
-			unionFind.expandUnionFind(newMapBlock.x, newMapBlock.y, newMapBlock.playerID, mapStat);
-		}
-		std::vector<int> step = GetStep(playerID, mapStat, sheepStat, unionFind, sheepBlocks);
-		SendStep(id_package, step);
-	}
-	// ****************************************************
-	auto end = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	printf("Time: %f\n", duration.count() / 1000.0);
-	// fclose(outfile);
+    // player initial
+    GetMap(id_package, playerID, mapStat);
+    std::vector<int> init_pos = InitPos(playerID, mapStat);
+    SendInitPos(id_package, init_pos);
+    while (true)
+    {
+        if (GetBoard(id_package, mapStat, sheepStat))
+            break;
+        // hide other player's sheep number start
+        for (int i = 0; i < 12; i++)
+            for (int j = 0; j < 12; j++)
+                if (mapStat[i][j] != playerID)
+                    sheepStat[i][j] = 0;
+        // hide other player's sheep number end 
+        std::vector<int> step = GetStep(playerID, mapStat, sheepStat);
+        SendStep(id_package, step);
+    }
+    // DON'T MODIFY ANYTHING IN THIS WHILE LOOP OR YOU WILL GET 0 POINT IN THIS QUESTION
+	fclose(outfile);
 }
+
+
+
+// 執行程式: Ctrl + F5 或 [偵錯] > [啟動但不偵錯] 功能表
+// 偵錯程式: F5 或 [偵錯] > [啟動偵錯] 功能表
+
+// 開始使用的提示: 
+//   1. 使用 [方案總管] 視窗，新增/管理檔案
+//   2. 使用 [Team Explorer] 視窗，連線到原始檔控制
+//   3. 使用 [輸出] 視窗，參閱組建輸出與其他訊息
+//   4. 使用 [錯誤清單] 視窗，檢視錯誤
+//   5. 前往 [專案] > [新增項目]，建立新的程式碼檔案，或是前往 [專案] > [新增現有項目]，將現有程式碼檔案新增至專案
+//   6. 之後要再次開啟此專案時，請前往 [檔案] > [開啟] > [專案]，然後選取 .sln 檔案
