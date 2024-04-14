@@ -26,8 +26,8 @@
 #define weightOpponentSheep 0.27
 #define exponentDFSArea 1.5
 #define exponentEvaluate 1.25
-#define MCTSSIMULATIONS 100
-#define MCTSDEPTH 7
+#define MCTSSIMULATIONS 200
+#define MCTSDEPTH 13
 #define minimaxDepth 2
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
@@ -443,11 +443,11 @@ void scorePosition(int x, int y, int mapStat[MAXGRID][MAXGRID], int& scoreEmptyN
     scoreEmptyNum = 0;
     scoreSurroundNum = 0;
 
-	for(int i = -2 ; i <= 2 ; ++i){
-		for(int j = -2 ; j <= 2 ; ++j){
+	for(int i = -3 ; i <= 3 ; ++i){
+		for(int j = -3 ; j <= 3 ; ++j){
 			if(i == 0 and j == 0) continue;
-			if(isPositionValidForOccupying(x + i, y + j, mapStat)) scoreEmptyNum++;
-			if(isPositionValid(x + i, y + j) and mapStat[x+i][y+j] > 0) scoreEmptyNum -= 2;
+			if(isPositionValidForOccupying(x + i, y + j, mapStat)) scoreEmptyNum+=2;
+			if(isPositionValid(x + i, y + j) and mapStat[x+i][y+j] > 0) scoreEmptyNum -= 3;
 		}
 	}
     for (int i = 1; i <= 9; i++) {
@@ -799,10 +799,10 @@ float GameState::evaluateByUnionFind(){
 		if(anyPlayerID == 0 or anyPlayerID == -1) continue;
 		playerArea[anyPlayerID] += pow(rootSize.size, exponentEvaluate);
 	}
-	return playerArea[this->myPlayerID];
-	// int rank = 1;
-	// for(int i = 1 ; i <= 4 ; ++i) if(playerArea[i] < playerArea[this->myPlayerID]) ++rank;
-	// return rank;
+	// return playerArea[this->myPlayerID];
+	int rank = 1;
+	for(int i = 1 ; i <= 4 ; ++i) if(playerArea[i] < playerArea[this->myPlayerID]) ++rank;
+	return rank * rank;
 }
 
 inline bool GameState::isTerminal() {
