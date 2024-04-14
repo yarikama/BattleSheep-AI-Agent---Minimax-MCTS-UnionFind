@@ -14,9 +14,9 @@
 SOCKET socketServer = INVALID_SOCKET;
 const char* infoServer[] = { "localhost", "8887" };
 /*
-	½Ð±N idTeam §ï¦¨²Õ§O
+	ï¿½Ð±N idTeam ï¿½ï¦¨ï¿½Õ§O
 */
-int idTeam = 1;
+int idTeam = 4;
 
 class _WSAData
 {
@@ -111,7 +111,7 @@ void _ReconnectToServer()
 }
 
 /*
-	¨ú±oªì©l¤Æ¦a¹Ï
+	ï¿½ï¿½ï¿½oï¿½ï¿½lï¿½Æ¦aï¿½ï¿½
 */
 void GetMap(int& id_package, int& playerID, int mapStat[12][12])
 {
@@ -167,13 +167,13 @@ void GetMap(int& id_package, int& playerID, int mapStat[12][12])
 
 
 /*
-	¨ú±o·í«e¹CÀ¸ª¬ºA
+	ï¿½ï¿½ï¿½oï¿½ï¿½ï¿½eï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½A
 
 	return (stop_program), (id_package, mapStat, sheepStat)
-	stop_program : True ªí¥Ü·í«eÀ³¥ß§Yµ²§ôµ{¦¡¡AFalse ªí¥Ü·í«e½ü¨ì¦Û¤v¤U´Ñ
-	id_package : ·í«e´Ñ½Lª¬ºAªº id¡A¦^¶Ç²¾°Ê°T®§®É»Ý­n¨Ï¥Î
-	mapStat: ·í«e´Ñ½L¦û»âªºª¬ºA
-	gameStat: ·í«e¦Ï¸s¤À¥¬ª¬ºA
+	stop_program : True ï¿½ï¿½ï¿½Ü·ï¿½ï¿½eï¿½ï¿½ï¿½ß§Yï¿½ï¿½ï¿½ï¿½ï¿½{ï¿½ï¿½ï¿½AFalse ï¿½ï¿½ï¿½Ü·ï¿½ï¿½eï¿½ï¿½ï¿½ï¿½Û¤vï¿½Uï¿½ï¿½
+	id_package : ï¿½ï¿½ï¿½eï¿½Ñ½Lï¿½ï¿½ï¿½Aï¿½ï¿½ idï¿½Aï¿½^ï¿½Ç²ï¿½ï¿½Ê°Tï¿½ï¿½ï¿½É»Ý­nï¿½Ï¥ï¿½
+	mapStat: ï¿½ï¿½ï¿½eï¿½Ñ½Lï¿½ï¿½ï¿½âªºï¿½ï¿½ï¿½A
+	gameStat: ï¿½ï¿½ï¿½eï¿½Ï¸sï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½A
 */
 bool GetBoard(int& id_package, int mapStat[12][12], int sheepStat[12][12])
 {
@@ -240,7 +240,7 @@ bool GetBoard(int& id_package, int mapStat[12][12], int sheepStat[12][12])
 }
 
 /*
-¶Ç°e°_©l¦ì¸m®y¼Ð, pos=<x,y>
+ï¿½Ç°eï¿½_ï¿½lï¿½ï¿½mï¿½yï¿½ï¿½, pos=<x,y>
 */
 void SendInitPos(int id_package, std::vector<int>& pos)
 {
@@ -267,12 +267,12 @@ void SendInitPos(int id_package, std::vector<int>& pos)
 
 
 /*
-	¦V server ¶Ç¹F²¾°Ê°T®§
-	id_package : ·Q­n¦^´_ªº°T®§ªº id_package
+	ï¿½V server ï¿½Ç¹Fï¿½ï¿½ï¿½Ê°Tï¿½ï¿½
+	id_package : ï¿½Qï¿½nï¿½^ï¿½_ï¿½ï¿½ï¿½Tï¿½ï¿½ï¿½ï¿½ id_package
 	Step = <x, y, m, dir>
-			x, y ªí¥Ü­n¶i¦æ°Ê§@ªº®y¼Ð
-			m = ­n¤Á³Î¦¨²Ä¤G¸sªº¦Ï¸s¼Æ¶q
-			dir = ²¾°Ê¤è¦V(1~9),¹ïÀ³¤è¦V¦p¤U¹Ï©Ò¥Ü
+			x, y ï¿½ï¿½ï¿½Ü­nï¿½iï¿½ï¿½Ê§@ï¿½ï¿½ï¿½yï¿½ï¿½
+			m = ï¿½nï¿½ï¿½ï¿½Î¦ï¿½ï¿½Ä¤Gï¿½sï¿½ï¿½ï¿½Ï¸sï¿½Æ¶q
+			dir = ï¿½ï¿½ï¿½Ê¤ï¿½V(1~9),ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Vï¿½pï¿½Uï¿½Ï©Ò¥ï¿½
 			1 2 3
 			4 X 6
 			7 8 9
