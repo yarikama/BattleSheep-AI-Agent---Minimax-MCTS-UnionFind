@@ -22,18 +22,18 @@
 #define rewardOpponentNear 13
 #define rewardOpponentFar 5
 #define weightDfsArea 0.45
-#define weightOpponentNum 0.28
-#define weightOpponentSheep 0.27
+#define weightOpponentNum 0.20
+#define weightOpponentSheep 0.35
 #define exponentDFSArea 1.5
-#define exponentEvaluate 1.8
-#define MCTSSIMULATIONS 90
+#define exponentEvaluate 2.4
+#define MCTSSIMULATIONS 60
 #define MCTSDEPTH 9
 #define minimaxDepth 2
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
 #define isEveryPosibilityMinimax 0
 #define isEveryPosibilityMCTS 1
-#define weightRatioOfArea 0.005
+#define weightRatioOfArea 0.02
 
 FILE* outfile;
 
@@ -448,8 +448,8 @@ void scorePosition(int x, int y, int mapStat[MAXGRID][MAXGRID], int& scoreEmptyN
 	for(int i = -3 ; i <= 3 ; ++i){
 		for(int j = -3 ; j <= 3 ; ++j){
 			if(i == 0 and j == 0) continue;
-			if(isPositionValidForOccupying(x + i, y + j, mapStat)) scoreEmptyNum+=2;
-			if(isPositionValid(x + i, y + j) and mapStat[x+i][y+j] > 0) scoreEmptyNum -= 3;
+			if(isPositionValidForOccupying(x + i, y + j, mapStat)) scoreEmptyNum += 2;
+			if(isPositionValid(x + i, y + j) and mapStat[x+i][y+j] > 0) scoreEmptyNum -= 4;
 		}
 	}
     for (int i = 1; i <= 9; i++) {
@@ -664,17 +664,17 @@ std::vector<float> GameState::calculateArea(int x, int y, int anyPlayerID){
 			area = pow(this->bfs(xMove, yMove, visited, anyPlayerID, isPositionValidForOccupyingOrBelongToPlayer), exponentDFSArea);
 			totalArea[0] += area;
 		} 	
-		if(this->mapState[xMove][yMove] > 0 and this->mapState[xMove][yMove] != anyPlayerID) {
+		if(this->mapState[xMove][yMove] > 0 ) {
 			// 這裡的 1/7 是因為 8個方向中有一個是自己
 			// (1)對手數量
 			totalArea[1] += (1/7.0);
 			// (2)對手sheep數量
-			totalArea[2] += this->sheepState[xMove][yMove] / (16.0 * 7);
+			totalArea[2] += this->sheepState[xMove][yMove] / (32.0 * 7);
 		}else if(this->mapState[xMove][yMove] == -1){
 			// (1)障礙數量
 			totalArea[1] += 1/7.0;
 			// (2)障礙sheep數量(算為1)
-			totalArea[2] += 1 / (16.0 * 7);
+			totalArea[2] += 1 / (32.0 * 7);
 		}
 	}
 	return totalArea;
