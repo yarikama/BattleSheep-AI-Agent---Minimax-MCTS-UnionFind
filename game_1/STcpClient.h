@@ -15,7 +15,12 @@ const char *infoServer[] = {"localhost", "8887"};
 /*
 	請將 idTeam 改成組別
 */
-int idTeam = 4;
+// int idTeam = 4;
+#ifdef TEAM_ID
+    int idTeam = TEAM_ID;
+#else
+    int idTeam = 4;
+#endif
 
 class _WSAData
 {

@@ -26,7 +26,7 @@
 #define weightOpponentSheep 0.27
 #define exponentDFSArea 1.5
 #define exponentEvaluate 1.8
-#define MCTSSIMULATIONS 90
+#define MCTSSIMULATIONS 80
 #define MCTSDEPTH 9
 #define minimaxDepth 2
 #define FLT_MAX std::numeric_limits<float>::max()
@@ -840,7 +840,7 @@ std::vector<int> GetStep(int playerID,
 				newSheepStat[block.first][block.second] = sheepStat[block.first][block.second];
 			}
 		}else{
-			int sheepAverageNumber = std::ceil(16.0 / sheepBlocks[i].size());
+			int sheepAverageNumber = std::round(16.0 / sheepBlocks[i].size());
 			for(auto& block : sheepBlocks[i]){
 				newSheepStat[block.first][block.second] = sheepAverageNumber;
 			}
@@ -1007,8 +1007,10 @@ bool simpleAgentChooseToMove(int anyPlayerID,
 
 
 int main() {
-	std::string filename = "output.txt";
-	outfile = fopen(filename.c_str(), "w");
+	// std::string filename = "output.txt";
+	// outfile = fopen(filename.c_str(), "w");
+	auto start = std::chrono::high_resolution_clock::now();
+	// ****************************************************
     int id_package;
     int playerID;
     int mapStat[12][12];
@@ -1034,7 +1036,11 @@ int main() {
         SendStep(id_package, step);
     }
     // DON'T MODIFY ANYTHING IN THIS WHILE LOOP OR YOU WILL GET 0 POINT IN THIS QUESTION
-	fclose(outfile);
+	// ****************************************************
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+	printf("Time: %f\n", duration.count() / 1000.0);
+	// fclose(outfile);
 }
 
 

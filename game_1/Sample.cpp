@@ -25,10 +25,21 @@
 #define weightOpponentNum 0.28
 #define weightOpponentSheep 0.27
 #define exponentDFSArea 1.5
+// parameter tuning
+#ifndef exponentEvaluate
 #define exponentEvaluate 1.8
+#endif
+#ifndef MCTSSIMULATIONS
 #define MCTSSIMULATIONS 90
+#endif
+#ifndef MCTSDEPTH
 #define MCTSDEPTH 9
+#endif
+#ifndef minimaxDepth
 #define minimaxDepth 2
+#endif
+
+
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
 #define isEveryPosibilityMinimax 0
