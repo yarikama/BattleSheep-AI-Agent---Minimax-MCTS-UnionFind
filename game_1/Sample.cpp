@@ -25,6 +25,7 @@
 #define weightOpponentNum 0.28
 #define weightOpponentSheep 0.27
 #define exponentDFSArea 1.5
+
 // parameter tuning
 #ifndef exponentEvaluate
 #define exponentEvaluate 1.8
