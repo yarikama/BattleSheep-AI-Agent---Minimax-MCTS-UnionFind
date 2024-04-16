@@ -2,8 +2,8 @@
 CXX = g++
 CXXFLAGS = -Wall -std=c++17 -O3
 LDFLAGS = -lws2_32
-TARGET = sample/Sample.exe
-SRCS = Sample.cpp
+TARGET = sample/team4_agent3.exe
+SRCS = team4_agent3.cpp
 
 # 預設目標
 all: $(TARGET)

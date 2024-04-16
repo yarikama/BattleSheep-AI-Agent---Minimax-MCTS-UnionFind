@@ -1,3 +1,6 @@
+/*
+TeamID: 4, Team name: Oh Wonder, Team member: 109704001 許恒睿, 109704038 孫于涵
+*/
 #include "STcpClient.h"
 #include <stdlib.h>
 #include <iostream>
@@ -25,14 +28,14 @@
 #define weightOpponentNum 0.20
 #define weightOpponentSheep 0.35
 #define exponentDFSArea 1.5
-#define exponentEvaluate 2.4
+#define exponentEvaluate 1.8
 #define MCTSSIMULATIONS 60
-#define MCTSDEPTH 9
-#define minimaxDepth 2
+#define MCTSDEPTH 10
+#define minimaxDepth 1
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
 #define isEveryPosibilityMinimax 0
-#define isEveryPosibilityMCTS 1
+#define isEveryPosibilityMCTS 0
 #define weightRatioOfArea 0.02
 
 FILE* outfile;

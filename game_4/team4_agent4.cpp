@@ -22,21 +22,19 @@ TeamID: 4, Team name: Oh Wonder, Team member: 109704001 許恒睿, 109704038 孫
 #define powSurroundLen 1.5
 #define weightSurroundLen 1
 #define weightEmptyNum 2
-#define rewardOpponentNear 13
+#define rewardOpponentNear 10
 #define rewardOpponentFar 5
 #define weightDfsArea 0.45
 #define weightOpponentNum 0.28
 #define weightOpponentSheep 0.27
-#define exponentDFSArea 1.5
-#define exponentEvaluate 1.5
+#define exponentAreaSheepNumber 1.5
+#define exponentEvaluate 1.8
 #define MCTSSIMULATIONS 90
 #define MCTSDEPTH 9
 #define minimaxDepth 2
-#define isEveryPosibilityMinimax 0
-#define isEveryPosibilityMCTS 1
-#define weightRatioOfArea 0.01
 #define FLT_MAX std::numeric_limits<float>::max()
 #define FLT_MIN std::numeric_limits<float>::min()
+#define isEveryPosibility false
 
 FILE* outfile;
 
@@ -50,7 +48,9 @@ constexpr int dyy[] = {0, 1, 0, -1};
 inline bool isPositionValid(int x, int y) { return x >= 0 && x < MAXGRID && y >= 0 && y < MAXGRID; }
 inline bool isPositionValidForOccupying(int x, int y, int mapState[MAXGRID][MAXGRID]) {return isPositionValid(x, y) && mapState[x][y] == 0; }
 inline bool isPositionBelongToPlayer(int x, int y, int playerID, int mapState[MAXGRID][MAXGRID]) { return isPositionValid(x, y) && mapState[x][y] == playerID; }
+inline bool isPositionBelongToTeam(int x, int y, int playerID, int mapState[MAXGRID][MAXGRID]) { return isPositionValid(x, y) && (mapState[x][y] == playerID or mapState[x][y] == ((playerID + 2) % 4)); }
 inline bool isPositionValidForOccupyingOrBelongToPlayer(int x, int y, int playerID, int mapState[MAXGRID][MAXGRID]) { return isPositionValid(x, y) && (mapState[x][y] == 0 or mapState[x][y] == playerID); }
+inline bool isPositionValidForOccupyingOrBelongToTeam(int x, int y, int playerID, int mapState[MAXGRID][MAXGRID]) { return isPositionValid(x, y) && (mapState[x][y] == 0 or mapState[x][y] == playerID or mapState[x][y] == ((playerID + 2) % 4)); }
 // 可移動方向以及移動距離，羊群
 struct Move{
 	int x;
@@ -156,13 +156,6 @@ class GameState{
 		std::vector<Move> getWhereToMoves(int anyPlayerID, bool everyPosibility);
 		int getSheepNumberToDivide(int xMove, int yMove, int x, int y, int anyPlayerID);
 		std::vector<float>  calculateArea(int x, int y, int anyPlayerID);
-		int dfs(int x, 
-				int y, 
-				std::vector<std::vector<bool>>& visited, 
-				int anyPlayerID, 
-				int originX, 
-				int originY, 
-				bool nineNine);
 		int bfs(int x, 
 				int y, 
 				std::vector<std::vector<bool>>& visited, 
@@ -173,8 +166,6 @@ class GameState{
 		float minimax(int depth, float alpha, float beta, int playerID, Move* bestMove = nullptr);
 		float evaluateByUnionFind();
 		inline bool isTerminal();
-		// float mcts(MCTSNode* node, int playerID, int depth, int maxDepth);
-		// float simulate(int playerID, int simulateDepth);
 };
 struct MCTSNode {
     int visits;
@@ -189,7 +180,7 @@ struct MCTSNode {
 		this->parent = lastParent;
 		this->roundPlayerID = roundPlayerID;
 		this->state = new GameState(state);
-		this->untriedMoves = this->state->getWhereToMoves(roundPlayerID, isEveryPosibilityMCTS);
+		this->untriedMoves = this->state->getWhereToMoves(roundPlayerID, isEveryPosibility);
 		this->visits = 0;
 		this->value = 0;
 	}
@@ -248,7 +239,7 @@ MCTSNode* MCTS::mctsExpansion(MCTSNode* parent){
 // 模擬遊戲直到遊戲結束
 float MCTS::mctsRollout(GameState &state, int anyPlayerID, int depth){
 	while(!state.isTerminal() && depth > 0){
-		std::vector<Move> moves = state.getWhereToMoves(anyPlayerID, isEveryPosibilityMCTS);
+		std::vector<Move> moves = state.getWhereToMoves(anyPlayerID, isEveryPosibility);
 		if(!moves.empty()){
 			int index = rand() % moves.size();
 			state = state.applyMoveForRollout(moves[index], state, anyPlayerID);
@@ -292,9 +283,6 @@ double MCTS::mcts(){
 	}
 	return this->root->value / this->root->visits;
 }
-
-
-// 版面資訊：棋盤狀態、羊群分布狀態、玩家ID、我的羊群位置（Stack）
 
 
 UnionFind::UnionFind(int unionSize){
@@ -629,8 +617,8 @@ int GameState::getSheepNumberToDivide(int xMove, int yMove, int x, int y, int an
 	std::vector<float> totalArea = this->calculateArea(x, y, anyPlayerID);
 	
 	//parameter0
-	float dfsAreaMove = totalAreaMove[0];
-	float dfsArea = totalArea[0];
+	float areaMove = totalAreaMove[0];
+	float originArea = totalArea[0];
 	//parameter1
 	float opponentNumMove = 1 - totalAreaMove[1];
 	float opponentNum = 1 - totalArea[1];
@@ -639,7 +627,7 @@ int GameState::getSheepNumberToDivide(int xMove, int yMove, int x, int y, int an
 	float opponentSheep = 1- totalArea[2];
 
 	float sheepDivideRatio = 
-		weightDfsArea * (dfsAreaMove / (dfsAreaMove + dfsArea)) + 
+		weightDfsArea * (areaMove / (areaMove + originArea)) + 
 		weightOpponentNum * (opponentNumMove / (opponentNumMove + opponentNum)) +
 		weightOpponentSheep * (opponentSheepMove / (opponentSheepMove + opponentSheep)
 	);
@@ -664,10 +652,12 @@ std::vector<float> GameState::calculateArea(int x, int y, int anyPlayerID){
 		//(0)加總連通面積1.25次方 DFS
 		if(!isPositionValid(xMove, yMove)) continue;
 		if(isPositionValidForOccupying(xMove, yMove, this->mapState)){
-			area = pow(this->bfs(xMove, yMove, visited, anyPlayerID, isPositionValidForOccupyingOrBelongToPlayer), exponentDFSArea);
+			area = pow(this->bfs(xMove, yMove, visited, anyPlayerID, isPositionValidForOccupyingOrBelongToPlayer), exponentAreaSheepNumber);
 			totalArea[0] += area;
 		} 	
-		if(this->mapState[xMove][yMove] > 0 and this->mapState[xMove][yMove] != anyPlayerID) {
+		if( this->mapState[xMove][yMove] > 0 
+		and this->mapState[xMove][yMove] != anyPlayerID 
+		and this->mapState[xMove][yMove] != ((anyPlayerID % 4) + 2) ){
 			// 這裡的 1/7 是因為 8個方向中有一個是自己
 			// (1)對手數量
 			totalArea[1] += (1/7.0);
@@ -681,20 +671,6 @@ std::vector<float> GameState::calculateArea(int x, int y, int anyPlayerID){
 		}
 	}
 	return totalArea;
-}
-// DFS 算連通面積，不可以走過，並且要是自己地盤或是空地
-int GameState::dfs(int x, int y, std::vector<std::vector<bool>>& visited, int anyPlayerID, int originX, int originY, bool nineNine){
-	int relativeX = nineNine? x - originX + 1 : x, relativeY = nineNine? y - originY + 1 : y;
-	if(nineNine and (relativeX < 0 or relativeX > 2 or relativeY < 0 or relativeY > 2)) return 0; 
-	if(visited[relativeX][relativeY] or !(this->mapState[x][y] == 0 or this->mapState[x][y] == anyPlayerID)) return 0;
-	visited[relativeX][relativeY] = true;
-	int area = 1;
-	for(int i = 0 ; i < 4 ; ++i){
-		int xMove = x + dxx[i];
-		int yMove = y + dyy[i];
-		if(isPositionValidForOccupying(xMove, yMove, this->mapState)) area += this->dfs(xMove, yMove, visited, anyPlayerID, originX, originY, nineNine);
-	}
-	return area;
 }
 // BFS 算連通面積，不可以走過，並且要是自己地盤或是空地
 int GameState::bfs(int x, int y, std::vector<std::vector<bool>>& visited, int anyPlayerID, bool (*areaType)(int, int, int, int[MAXGRID][MAXGRID])) {
@@ -749,7 +725,7 @@ GameState GameState::applyMoveForRollout(Move move, const GameState& lastState, 
 // 下一個玩家是誰(anyPlayerID % 4 + 1)
 float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Move* bestMove){
 	// 找所有可以動的地方
-	std::vector<Move> availableMoves = this->getWhereToMoves(anyPlayerID, isEveryPosibilityMinimax);
+	std::vector<Move> availableMoves = this->getWhereToMoves(anyPlayerID, isEveryPosibility);
 	// 終止條件
 	if(availableMoves.empty()) return this->evaluateByUnionFind();
 	if(depth == 0){
@@ -764,7 +740,7 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Mo
 		return stateA.evaluateByUnionFind() > stateB.evaluateByUnionFind();
     });
 
-	if(anyPlayerID == this->myPlayerID){
+	if(anyPlayerID == this->myPlayerID or anyPlayerID == ((this->myPlayerID % 4) + 2)){
         float maxEvaluation = FLT_MIN;
 		for(auto& move : availableMoves){
 			GameState newState = this->applyMove(move, *this, anyPlayerID);
@@ -777,9 +753,7 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Mo
 		}
 
 		return maxEvaluation;
-	}
-
-	if(anyPlayerID != this->myPlayerID){
+	}else{
         float minEvaluation = FLT_MAX;
 
 		for(auto& move : availableMoves){
@@ -795,6 +769,7 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Mo
 	return -1;
 }
 // 用UnionFind評估版面，可以選要評估哪個玩家的面積或是排名
+// game 4 這邊使用兩個玩家的共同面積
 float GameState::evaluateByUnionFind(){
 	std::vector<float> playerArea(5, 0);
 	playerArea[0] = -1;
@@ -803,18 +778,23 @@ float GameState::evaluateByUnionFind(){
 		int anyPlayerID = this->mapState[rootSize.x][rootSize.y];
 		if(anyPlayerID == 0 or anyPlayerID == -1) continue;
 		playerArea[anyPlayerID] += pow(rootSize.size, exponentEvaluate);
+		playerArea[(anyPlayerID % 4) + 2] += pow(rootSize.size, exponentEvaluate);
 	}
 	// return playerArea[this->myPlayerID];
-	int rank = 1;
-	for(int i = 1 ; i <= 4 ; ++i) if(playerArea[i] < playerArea[this->myPlayerID]) ++rank;
-	return rank * rank + weightRatioOfArea * playerArea[this->myPlayerID];
+	// int rank = 1;
+	// for(int i = 1 ; i <= 4 ; ++i) if(playerArea[i] < playerArea[this->myPlayerID]) ++rank;
+	// return rank * rank;
+
+	int rank = (playerArea[this->myPlayerID] > playerArea[(this->myPlayerID % 4) + 1])? 2 : 1;
+	// printf("rank = %f\n", rank * rank + 0.01 * playerArea[this->myPlayerID]);
+	return rank * rank + 0.01 * playerArea[this->myPlayerID];
 }
 
 inline bool GameState::isTerminal() {
-	if(!getWhereToMoves(1, isEveryPosibilityMCTS).empty()) return false;
-	if(!getWhereToMoves(2, isEveryPosibilityMCTS).empty()) return false;
-	if(!getWhereToMoves(3, isEveryPosibilityMCTS).empty()) return false;
-	if(!getWhereToMoves(4, isEveryPosibilityMCTS).empty()) return false;
+	if(!getWhereToMoves(1, isEveryPosibility).empty()) return false;
+	if(!getWhereToMoves(2, isEveryPosibility).empty()) return false;
+	if(!getWhereToMoves(3, isEveryPosibility).empty()) return false;
+	if(!getWhereToMoves(4, isEveryPosibility).empty()) return false;
 	return true;	
 }
 
