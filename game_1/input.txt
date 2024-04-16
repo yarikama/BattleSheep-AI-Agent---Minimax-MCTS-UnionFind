@@ -1,9 +1,9 @@
 1
-./sample/Sample1.exe
+./sample/Sample_1.exe
 2
-./sample/Sample2.exe
+./sample/Sample_2.exe
 3
-./sample/Sample3.exe
+./sample/Sample_3.exe
 4
-./sample/Sample4.exe
+./sample/team4_agent1.exe
 1

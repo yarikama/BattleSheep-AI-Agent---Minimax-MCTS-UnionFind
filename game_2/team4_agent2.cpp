@@ -1,3 +1,6 @@
+/*
+TeamID: 4, Team name: Oh Wonder, Team member: 109704001 許恒睿, 109704038 孫于涵
+*/
 #include "STcpClient.h"
 #include <stdlib.h>
 #include <iostream>

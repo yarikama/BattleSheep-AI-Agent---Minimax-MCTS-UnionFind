@@ -4,8 +4,8 @@ CXXFLAGS = -Wall -std=c++17 -O3
 LDFLAGS = -lws2_32
 # TARGET = sample/team4_agent4.exe
 # SRCS = team4_agent4.cpp
-TARGET = sample/Sample.exe
-SRCS = Sample.cpp
+TARGET = sample/team4_agent4.exe
+SRCS = team4_agent4.cpp
 
 # 預設目標
 all: $(TARGET)
