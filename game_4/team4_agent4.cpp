@@ -733,14 +733,14 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Mo
 		double value = M.mcts();
 		return value;
 	}
-	// 加快 minimax 速度，先評估好的走法排在前面
-    std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
-        GameState stateA = this->applyMove(a, *this, anyPlayerID);
-        GameState stateB = this->applyMove(b, *this, anyPlayerID);
-		return stateA.evaluateByUnionFind() > stateB.evaluateByUnionFind();
-    });
 
 	if(anyPlayerID == this->myPlayerID or anyPlayerID == ((this->myPlayerID % 4) + 2)){
+		// 加快 minimax 速度，先評估好的走法排在前面
+		std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
+			GameState stateA = this->applyMove(a, *this, anyPlayerID);
+			GameState stateB = this->applyMove(b, *this, anyPlayerID);
+			return stateA.evaluateByUnionFind() > stateB.evaluateByUnionFind();
+		});
         float maxEvaluation = FLT_MIN;
 		for(auto& move : availableMoves){
 			GameState newState = this->applyMove(move, *this, anyPlayerID);
@@ -754,8 +754,14 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Mo
 
 		return maxEvaluation;
 	}else{
-        float minEvaluation = FLT_MAX;
+		// 加快 minimax 速度，先評估壞的走法排在前面
+		std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
+			GameState stateA = this->applyMove(a, *this, anyPlayerID);
+			GameState stateB = this->applyMove(b, *this, anyPlayerID);
+			return stateA.evaluateByUnionFind() < stateB.evaluateByUnionFind();
+		});
 
+        float minEvaluation = FLT_MAX;
 		for(auto& move : availableMoves){
 			GameState newState = this->applyMove(move, *this, anyPlayerID);
 			float evaluation = newState.minimax(depth - 1, alpha, beta, (anyPlayerID % 4) + 1);
