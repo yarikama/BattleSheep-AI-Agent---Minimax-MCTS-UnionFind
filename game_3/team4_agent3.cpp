@@ -781,7 +781,7 @@ float GameState::minimax(int depth, float alpha, float beta, int anyPlayerID, Mo
 	}
 
 	if(anyPlayerID != this->myPlayerID){
-		// 加快 minimax 速度，先評估好的走法排在前面
+		// 加快 minimax 速度，先評估壞的走法排在前面
 		std::sort(availableMoves.begin(), availableMoves.end(), [this, anyPlayerID](const Move& a, const Move& b) {
 			GameState stateA = this->applyMove(a, *this, anyPlayerID);
 			GameState stateB = this->applyMove(b, *this, anyPlayerID);
